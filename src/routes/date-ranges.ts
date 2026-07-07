@@ -49,9 +49,10 @@ export function dateRangeRoutes(app: FastifyInstance): void {
       if (!entry) throw notFound('entry', req.params.entryId);
       const calendar = await app.prisma.calendar.findUnique({
         where: { id: req.body.calendarId },
+        include: { timeline: true },
       });
       if (!calendar) throw notFound('calendar', req.body.calendarId);
-      if (calendar.worldId !== entry.worldId) {
+      if (calendar.timeline.worldId !== entry.worldId) {
         throw crossWorld('calendar belongs to a different world than the entry');
       }
 
@@ -99,9 +100,12 @@ export function dateRangeRoutes(app: FastifyInstance): void {
       if (!existing) throw notFound('date range', req.params.id);
 
       const calendarId = req.body.calendarId ?? existing.calendarId;
-      const calendar = await app.prisma.calendar.findUnique({ where: { id: calendarId } });
+      const calendar = await app.prisma.calendar.findUnique({
+        where: { id: calendarId },
+        include: { timeline: true },
+      });
       if (!calendar) throw notFound('calendar', calendarId);
-      if (calendar.worldId !== existing.entry.worldId) {
+      if (calendar.timeline.worldId !== existing.entry.worldId) {
         throw crossWorld('calendar belongs to a different world than the entry');
       }
 

@@ -2,23 +2,30 @@ import { Prisma } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import booleanIntersects from '@turf/boolean-intersects';
 import { bboxPolygon } from '@turf/bbox-polygon';
+import { geoAzimuthalEquidistant } from 'd3-geo';
 import { notFound, validation } from '../lib/errors.js';
-import { type Bbox, getBboxes } from '../lib/artifact-util.js';
+import { type Bbox } from '../lib/artifact-util.js';
 import { parseGeoJson } from '../lib/payloads.js';
+import { splitLngBox, toCanonicalFeatures } from '../lib/geo.js';
 
 // Two-stage search (see docs/STACK.md): Postgres indexes narrow candidates
-// (tsvector GIN, bbox GiST, tick btree, tag/type equality); the optional
-// exact pass (turf) then only ever touches the narrowed set.
+// (tsvector GIN, canonical bbox GiST, tick btree, tag/type equality); the
+// optional exact pass (turf) then only ever touches the narrowed set.
+//
+// Geo bbox and the query box are canonical lng/lat: bbox search is scoped by
+// globeId (a geometry reaches its globe via its CRS), so one query compares
+// every CRS under the globe in one frame. Tick search is scoped by timelineId.
 
 interface SearchQuery {
   q?: string;
   type?: string;
   tag?: string | string[];
   bbox?: string;
-  crsId?: string;
+  globeId?: string;
   exact?: boolean;
   tickStart?: number;
   tickEnd?: number;
+  timelineId?: string;
   limit?: number;
   cursor?: string;
 }
@@ -26,9 +33,48 @@ interface SearchQuery {
 function parseBbox(raw: string): Bbox {
   const parts = raw.split(',').map(Number);
   if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n))) {
-    throw validation('bbox must be four comma-separated numbers: minX,minY,maxX,maxY');
+    throw validation('bbox must be four comma-separated numbers: minLng,minLat,maxLng,maxLat');
   }
   return parts as unknown as Bbox;
+}
+
+// Project a GeoJSON coordinate tree through a d3 projection (planar output).
+function projectCoords(coords: any, proj: (p: [number, number]) => [number, number] | null): any {
+  if (typeof coords[0] === 'number') {
+    const p = proj([coords[0], coords[1]]);
+    return p ?? [NaN, NaN];
+  }
+  return coords.map((c: any) => projectCoords(c, proj));
+}
+
+function projectFeature(feature: any, proj: (p: [number, number]) => [number, number] | null): any {
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: {
+      type: feature.geometry.type,
+      coordinates: projectCoords(feature.geometry.coordinates, proj),
+    },
+  };
+}
+
+const D2R = Math.PI / 180;
+const R2D = 180 / Math.PI;
+
+// Great-circle angular distance in degrees between two canonical lng/lat points.
+function angularDeg(aLng: number, aLat: number, bLng: number, bLat: number): number {
+  const c =
+    Math.sin(aLat * D2R) * Math.sin(bLat * D2R) +
+    Math.cos(aLat * D2R) * Math.cos(bLat * D2R) * Math.cos((bLng - aLng) * D2R);
+  return Math.acos(Math.min(1, Math.max(-1, c))) * R2D;
+}
+
+// Does any vertex (canonical lng/lat tree) lie more than `limit`° from the
+// query centre? Past the near hemisphere the query-local planar frame distorts
+// toward its singularity and turf can't be trusted (see docs/ARCHITECTURE.md).
+function anyBeyond(coords: any, cLng: number, cLat: number, limit: number): boolean {
+  if (typeof coords[0] === 'number') return angularDeg(cLng, cLat, coords[0], coords[1]) > limit;
+  return coords.some((c: any) => anyBeyond(c, cLng, cLat, limit));
 }
 
 export function searchRoutes(app: FastifyInstance): void {
@@ -43,10 +89,11 @@ export function searchRoutes(app: FastifyInstance): void {
             type: { type: 'string' },
             tag: { type: ['string', 'array'], items: { type: 'string' } },
             bbox: { type: 'string' },
-            crsId: { type: 'string' },
+            globeId: { type: 'string' },
             exact: { type: 'boolean', default: false },
             tickStart: { type: 'number' },
             tickEnd: { type: 'number' },
+            timelineId: { type: 'string' },
             limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
             cursor: { type: 'string' },
           },
@@ -55,7 +102,8 @@ export function searchRoutes(app: FastifyInstance): void {
     },
     async (req) => {
       const { worldId } = req.params;
-      const { q, type, bbox: rawBbox, crsId, exact, tickStart, tickEnd, limit = 50 } = req.query;
+      const { q, type, bbox: rawBbox, globeId, exact, tickStart, tickEnd, timelineId, limit = 50 } =
+        req.query;
       const tags = req.query.tag === undefined ? [] : ([] as string[]).concat(req.query.tag);
 
       const world = await app.prisma.world.findUnique({ where: { id: worldId } });
@@ -65,11 +113,14 @@ export function searchRoutes(app: FastifyInstance): void {
       if (hasTicks && (tickStart === undefined || tickEnd === undefined)) {
         throw validation('tickStart and tickEnd must be given together');
       }
-      if (rawBbox && !crsId) throw validation('bbox requires crsId');
+      if (rawBbox && !globeId) throw validation('bbox requires globeId');
+      if (hasTicks && !timelineId) throw validation('tickStart/tickEnd requires timelineId');
       if (!q && !type && tags.length === 0 && !rawBbox && !hasTicks) {
         throw validation('at least one filter (q, type, tag, bbox, tickStart/tickEnd) is required');
       }
       const bbox = rawBbox ? parseBbox(rawBbox) : null;
+      // The query box may itself cross the antimeridian → 1–2 canonical boxes.
+      const qBoxes = bbox ? splitLngBox(bbox[0], bbox[2], bbox[1], bbox[3]) : [];
 
       // ---- Stage 1: index-backed candidate narrowing, all in one query ----
       const conds: Prisma.Sql[] = [Prisma.sql`e."worldId" = ${worldId}`];
@@ -85,15 +136,21 @@ export function searchRoutes(app: FastifyInstance): void {
           WHERE si."entryId" = e.id AND si.tsv @@ plainto_tsquery('english', ${q}))`);
       }
       if (bbox) {
+        const overlaps = qBoxes.map(
+          (b) => Prisma.sql`gb.box && box(point(${b[0]}, ${b[1]}), point(${b[2]}, ${b[3]}))`
+        );
         conds.push(Prisma.sql`EXISTS (
           SELECT 1 FROM "Geometry" g
-          WHERE g."entryId" = e.id AND g."crsId" = ${crsId} AND g.status = 'ready'
-            AND g.bbox && box(point(${bbox[0]}, ${bbox[1]}), point(${bbox[2]}, ${bbox[3]})))`);
+          JOIN "CrsDefinition" c ON c.id = g."crsId"
+          JOIN "GeometryBox" gb ON gb."geometryId" = g.id
+          WHERE g."entryId" = e.id AND c."globeId" = ${globeId} AND g.status = 'ready'
+            AND (${Prisma.join(overlaps, ' OR ')}))`);
       }
       if (hasTicks) {
         conds.push(Prisma.sql`EXISTS (
           SELECT 1 FROM "DateRange" d
-          WHERE d."entryId" = e.id
+          JOIN "Calendar" cal ON cal.id = d."calendarId"
+          WHERE d."entryId" = e.id AND cal."timelineId" = ${timelineId}
             AND d."tickStart" IS NOT NULL AND d."tickEnd" IS NOT NULL
             AND d."tickStart" <= ${tickEnd} AND d."tickEnd" >= ${tickStart})`);
       }
@@ -109,25 +166,42 @@ export function searchRoutes(app: FastifyInstance): void {
       let ids = candidates.map((c) => c.id);
 
       // ---- Stage 2a: exact geometry pass (turf) on the narrowed set only ----
-      if (bbox && exact && ids.length > 0) {
-        const queryPoly = bboxPolygon(bbox);
+      // Runs in a query-local azimuthal frame centred on the query box. That
+      // frame is only trustworthy within ~a hemisphere of the centre; geometry
+      // reaching past HORIZON approaches the frame singularity where turf can't
+      // be trusted. So: a near-global query skips the exact pass entirely, and a
+      // candidate reaching past the horizon is conservatively KEPT (never dropped
+      // on an untrustworthy test). See docs/ARCHITECTURE.md.
+      const HORIZON = 90;
+      const queryPoly = bbox ? bboxPolygon(bbox) : null;
+      const queryDegenerate =
+        queryPoly !== null &&
+        anyBeyond(queryPoly.geometry.coordinates, (bbox![0] + bbox![2]) / 2, (bbox![1] + bbox![3]) / 2, HORIZON);
+
+      if (bbox && exact && ids.length > 0 && !queryDegenerate) {
+        const cLng = (bbox[0] + bbox[2]) / 2;
+        const cLat = (bbox[1] + bbox[3]) / 2;
+        const local = geoAzimuthalEquidistant().rotate([-cLng, -cLat]);
+        const proj = (p: [number, number]) => local(p) as [number, number] | null;
+        const projQuery = projectFeature(queryPoly, proj);
+
         const geoms = await app.prisma.geometry.findMany({
-          where: { entryId: { in: ids }, crsId: crsId!, status: 'ready' },
+          where: { entryId: { in: ids }, status: 'ready', crs: { globeId } },
+          include: { crs: { include: { globe: true } } },
         });
-        const geomBboxes = await getBboxes(
-          app.prisma,
-          geoms.map((g) => g.id)
-        );
-        const overlaps = (b: Bbox) =>
-          b[0] <= bbox[2] && b[2] >= bbox[0] && b[1] <= bbox[3] && b[3] >= bbox[1];
 
         const surviving = new Set<string>();
         for (const g of geoms) {
           if (surviving.has(g.entryId)) continue;
-          const gb = geomBboxes.get(g.id);
-          if (!gb || !overlaps(gb)) continue;
+          const radius = Number((g.crs.globe.params as any)?.radius);
           const parsed = parseGeoJson((await app.store.getBytes(g.filePath)).toString('utf8'));
-          if (parsed.features.some((f) => booleanIntersects(f as any, queryPoly))) {
+          const canon = toCanonicalFeatures(parsed.features, g.crs.params as any, radius);
+          // candidate wraps toward the frame singularity → keep, don't test
+          if (canon.some((f) => anyBeyond(f.geometry.coordinates, cLng, cLat, HORIZON))) {
+            surviving.add(g.entryId);
+            continue;
+          }
+          if (canon.some((f) => booleanIntersects(projectFeature(f, proj) as any, projQuery))) {
             surviving.add(g.entryId);
           }
         }

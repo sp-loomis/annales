@@ -46,16 +46,19 @@ src/
     calendar.ts          tick conversion engine (arithmetic + ordinal)
     payloads.ts          semantic validation of uploads: GeoJSON, Excalidraw,
                          image magic bytes
+    geo.ts               d3-geo canonicalization: invert authored coords to the
+                         globe's lng/lat, antimeridian split, pole handling
     artifact-util.ts     derived artifact status, filePath convention,
-                         bbox raw-SQL read/write
+                         canonical bbox raw-SQL read/write (GeometryBox)
     search-index.ts      SearchIndex raw-SQL writes (tsvector column)
   routes/
     health.ts            GET /healthz (DB + storage probes)
     worlds.ts            world CRUD + cascading delete (incl. storage cleanup)
     entries.ts           entry CRUD, tags, cursor pagination, detail aggregation
     artifacts.ts         one lifecycle engine × 4 artifact kinds (see below)
-    world-config.ts      one CRUD factory × 3 config resources (CRS, calendars,
-                         relation types)
+    world-config.ts      one CRUD factory, two scopes: world-scoped (globes,
+                         timelines, relation types) and parent-scoped (CRS under
+                         a globe, calendars under a timeline)
     date-ranges.ts       date-range CRUD; delegates tick math to lib/calendar
     relations.ts         relation CRUD + graph traversal (recursive CTE)
     search.ts            two-stage search (see below)
@@ -93,10 +96,10 @@ only what differs:
 | Hook | documents | images | sketches | geometries |
 |---|---|---|---|---|
 | create body | `role`, `label?` | `contentType`, `label?` | `label?` | `crsId`, `label?` |
-| `prepareCreate` | — | — | — | CRS exists + same world |
+| `prepareCreate` | — | — | — | CRS exists + its globe's world matches the entry |
 | `finalize` validation | UTF-8 | magic bytes match declared type | Excalidraw scene shape | GeoJSON Feature/FeatureCollection |
-| `finalize` derivation | tsvector from text | webp thumbnail (sharp, ≤512px) | tsvector from scene text | bbox (raw SQL) + cached properties |
-| extra response fields | `role` | `contentType`, `thumbnail` | — | `crsId`, `bbox`, `properties` |
+| `finalize` derivation | tsvector from text | webp thumbnail (sharp, ≤512px) | tsvector from scene text | canonical lng/lat bboxes via d3-geo (raw SQL) + cached properties |
+| extra response fields | `role` | `contentType`, `thumbnail` | — | `crsId`, `bboxes`, `properties` |
 
 Status is **stored** as `pending`/`ready` but **served** as
 `pending`/`ready`/`failed`: `failed` is computed at read time
@@ -114,9 +117,10 @@ Prisma cannot express two Postgres-native features we rely on, so these
 columns are `Unsupported(...)` in the schema and all access is raw SQL,
 concentrated in two small modules:
 
-- **`Geometry.bbox`** (`box` + GiST): written by `setBbox`, read by
-  `getBboxes` (corner-order agnostic via LEAST/GREATEST), overlap-queried
-  with the `&&` operator in search. This is core Postgres — no PostGIS.
+- **`GeometryBox.box`** (`box` + GiST): canonical lng/lat bbox(es) — a geometry
+  has one, or two across the antimeridian. Written by `setBboxes`, read by
+  `getBboxes` (corner-order agnostic via LEAST/GREATEST), overlap-queried with
+  the `&&` operator in search. This is core Postgres — no PostGIS.
 - **`SearchIndex.tsv`** (`tsvector` + GIN): written by `reindexArtifact`
   (which also stores the extracted plain text so `ts_headline` can build
   snippets without a storage round trip), queried with `@@` +
@@ -134,13 +138,28 @@ CTE bounded by depth, deduped by `(id, depth)` so cycles terminate, reporting
 Stage 1 is one SQL query over `Entry` composed of `EXISTS` sub-clauses — one
 per active filter (tsvector match, tag equality, type equality, bbox `&&`
 overlap, tick-interval overlap). Every clause is index-backed; this always
-runs first and narrows the candidate set.
+runs first and narrows the candidate set. The bbox clause joins `Geometry →
+CrsDefinition` and scopes by `globeId` — canonical bboxes make one `&&` compare
+every CRS under the globe; the query box (and each stored box) is split at the
+antimeridian and the overlaps are OR'd. The tick clause joins `DateRange →
+Calendar` and scopes by `timelineId`.
 
 Stage 2 only ever touches candidates:
 
-- `exact=true`: candidate geometries' files are fetched from storage and
-  tested with turf (`booleanIntersects`) against the query box — bbox
-  overlap is necessary but not sufficient.
+- `exact=true`: candidate geometries' files are fetched, reprojected to
+  canonical lng/lat, then both they and the query box are projected into a
+  query-local azimuthal frame (keeps turf's planar math valid across the
+  antimeridian/poles) and tested with turf (`booleanIntersects`). bbox overlap
+  is necessary but not sufficient.
+  - That planar frame is only trustworthy within ~a hemisphere of the query
+    centre; a polygon enclosing the frame's singularity would tear (turf is
+    planar — spherical topology has no faithful single chart). So the exact pass
+    is guarded by an angular horizon (90°): a **near-global query** skips the
+    exact pass entirely (falls back to tier-1), and a **candidate reaching past
+    the horizon** is conservatively **kept**, never dropped. The exact pass thus
+    only ever removes candidates it can confidently reject — singularity-
+    enclosing / near-global geometry is out of scope for exact refinement for
+    now (a future spherical predicate, e.g. s2, would lift this).
 - `q` present: one more SQL pass computes `ts_rank` + `ts_headline` snippets
   for candidate index rows; entries are ordered by max rank.
 
@@ -149,7 +168,7 @@ Stage 1 is never bypassed — turf and ranking never see a full table.
 ## Calendar engine (`src/lib/calendar.ts`)
 
 Pure functions, no I/O. `validateCalendarDefinition` gates calendar writes;
-`computeTicks` converts as-authored `rawComponents` to the world tick line at
+`computeTicks` converts as-authored `rawComponents` to the timeline's tick line at
 date-range write time (both stored — conversion is never lossy). Semantics
 are pinned in the [API.md appendix](API.md#appendix-calendar-definitions--tick-semantics),
 and the contract tests assert exact tick numbers.

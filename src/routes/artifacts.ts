@@ -4,11 +4,10 @@ import sharp from 'sharp';
 import { crossWorld, invalidPayload, notFound, uploadMissing } from '../lib/errors.js';
 import {
   type ArtifactKind,
-  type Bbox,
   deriveStatus,
   filePathFor,
   getBboxes,
-  setBbox,
+  setBboxes,
   thumbKeyFor,
 } from '../lib/artifact-util.js';
 import {
@@ -18,6 +17,7 @@ import {
   parseExcalidraw,
   parseGeoJson,
 } from '../lib/payloads.js';
+import { canonicalize } from '../lib/geo.js';
 import { dropArtifactIndex, reindexArtifact, type SourceType } from '../lib/search-index.js';
 
 // All four file-backed artifact kinds share one lifecycle:
@@ -131,26 +131,39 @@ const KINDS: KindConfig[] = [
       properties: { crsId: { type: 'string', minLength: 1 }, ...label },
     },
     prepareCreate: async (app, entry, body) => {
-      const crs = await app.prisma.crsDefinition.findUnique({ where: { id: body.crsId } });
+      const crs = await app.prisma.crsDefinition.findUnique({
+        where: { id: body.crsId },
+        include: { globe: true },
+      });
       if (!crs) throw notFound('CRS definition', body.crsId);
-      if (crs.worldId !== entry.worldId) {
+      if (crs.globe.worldId !== entry.worldId) {
         throw crossWorld('CRS definition belongs to a different world than the entry');
       }
       return { crsId: crs.id, label: body.label ?? null };
     },
     finalize: async (app, row, bytes) => {
       const parsed = parseGeoJson(bytes.toString('utf8'));
+      const crs = await app.prisma.crsDefinition.findUnique({
+        where: { id: row.crsId },
+        include: { globe: true },
+      });
+      if (!crs) throw notFound('CRS definition', row.crsId);
+      const radius = Number((crs.globe.params as any)?.radius);
+      if (!Number.isFinite(radius) || radius <= 0) {
+        throw new PayloadError("globe params.radius must be a positive number");
+      }
+      const boxes = canonicalize(parsed.features, crs.params as any, radius);
       return {
         patch: { properties: parsed.properties ?? undefined },
         texts: [row.label],
-        after: () => setBbox(app.prisma, row.id, parsed.bbox),
+        after: () => setBboxes(app.prisma, row.id, boxes),
       };
     },
     fields: async (app, row) => {
       const bboxes = await getBboxes(app.prisma, [row.id]);
       return {
         crsId: row.crsId,
-        bbox: bboxes.get(row.id) ?? null,
+        bboxes: bboxes.get(row.id) ?? [],
         properties: row.properties ?? null,
       };
     },

@@ -32,8 +32,8 @@ const prisma = new PrismaClient({ datasources: { db: { url: TEST_DATABASE_URL } 
 export async function resetDb(): Promise<void> {
   await prisma.$executeRawUnsafe(
     'TRUNCATE TABLE "World", "Entry", "EntryTag", "Document", "Image", "Sketch", ' +
-      '"Geometry", "CrsDefinition", "DateRange", "Calendar", "RelationType", ' +
-      '"Relation", "SearchIndex" CASCADE'
+      '"Geometry", "GeometryBox", "Globe", "CrsDefinition", "DateRange", ' +
+      '"Timeline", "Calendar", "RelationType", "Relation", "SearchIndex" CASCADE'
   );
 }
 
@@ -110,22 +110,47 @@ export async function createEntry(
   );
 }
 
-export async function createCrs(
+// radius 180/π makes an equirectangular projection map projected units to
+// degrees: x = lng, y = -lat. Fixtures rely on this exact convention.
+export const DEG_RADIUS = 180 / Math.PI;
+
+export async function createGlobe(
   app: FastifyInstance,
   worldId: string,
-  name = 'main',
-  params: Record<string, unknown> = { projection: 'equirectangular' }
+  name = 'terra',
+  params: Record<string, unknown> = { radius: DEG_RADIUS }
 ): Promise<any> {
-  return must(await api(app, 'POST', `/worlds/${worldId}/crs`, { name, params }), 201, 'createCrs');
+  return must(
+    await api(app, 'POST', `/worlds/${worldId}/globes`, { name, params }),
+    201,
+    'createGlobe'
+  );
+}
+
+export async function createTimeline(
+  app: FastifyInstance,
+  worldId: string,
+  name = 'ages'
+): Promise<any> {
+  return must(await api(app, 'POST', `/worlds/${worldId}/timelines`, { name }), 201, 'createTimeline');
+}
+
+export async function createCrs(
+  app: FastifyInstance,
+  globeId: string,
+  name = 'main',
+  params: Record<string, unknown> = { type: 'equirectangular' }
+): Promise<any> {
+  return must(await api(app, 'POST', `/globes/${globeId}/crs`, { name, params }), 201, 'createCrs');
 }
 
 export async function createCalendar(
   app: FastifyInstance,
-  worldId: string,
+  timelineId: string,
   over: Record<string, unknown> = {}
 ): Promise<any> {
   return must(
-    await api(app, 'POST', `/worlds/${worldId}/calendars`, {
+    await api(app, 'POST', `/timelines/${timelineId}/calendars`, {
       name: 'common reckoning',
       type: 'arithmetic',
       definition: {

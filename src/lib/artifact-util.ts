@@ -44,30 +44,48 @@ export function thumbKeyFor(filePath: string): string {
   return `${filePath}.thumb.webp`;
 }
 
+/** Canonical lng/lat bbox: [minLng, minLat, maxLng, maxLat]. */
 export type Bbox = [number, number, number, number];
 
-/** bbox is an Unsupported (native box) column — read via raw SQL, corner-order agnostic. */
+/**
+ * A geometry has one or two canonical boxes (antimeridian split). `box` is an
+ * Unsupported (native box) column in GeometryBox — read via raw SQL,
+ * corner-order agnostic. Returns a list per geometry (empty while pending).
+ */
 export async function getBboxes(
   prisma: PrismaClient,
   geometryIds: string[]
-): Promise<Map<string, Bbox>> {
+): Promise<Map<string, Bbox[]>> {
   if (geometryIds.length === 0) return new Map();
   const rows = await prisma.$queryRaw<
-    { id: string; minx: number; miny: number; maxx: number; maxy: number }[]
+    { geometryId: string; minx: number; miny: number; maxx: number; maxy: number }[]
   >(Prisma.sql`
-    SELECT id,
-      LEAST((bbox[0])[0], (bbox[1])[0])::float8    AS minx,
-      LEAST((bbox[0])[1], (bbox[1])[1])::float8    AS miny,
-      GREATEST((bbox[0])[0], (bbox[1])[0])::float8 AS maxx,
-      GREATEST((bbox[0])[1], (bbox[1])[1])::float8 AS maxy
-    FROM "Geometry"
-    WHERE id IN (${Prisma.join(geometryIds)}) AND bbox IS NOT NULL`);
-  return new Map(rows.map((r) => [r.id, [r.minx, r.miny, r.maxx, r.maxy] as Bbox]));
+    SELECT "geometryId",
+      LEAST((box[0])[0], (box[1])[0])::float8    AS minx,
+      LEAST((box[0])[1], (box[1])[1])::float8    AS miny,
+      GREATEST((box[0])[0], (box[1])[0])::float8 AS maxx,
+      GREATEST((box[0])[1], (box[1])[1])::float8 AS maxy
+    FROM "GeometryBox"
+    WHERE "geometryId" IN (${Prisma.join(geometryIds)})`);
+  const m = new Map<string, Bbox[]>();
+  for (const r of rows) {
+    const list = m.get(r.geometryId) ?? [];
+    list.push([r.minx, r.miny, r.maxx, r.maxy]);
+    m.set(r.geometryId, list);
+  }
+  return m;
 }
 
-export async function setBbox(prisma: PrismaClient, geometryId: string, bbox: Bbox): Promise<void> {
-  await prisma.$executeRaw`
-    UPDATE "Geometry"
-    SET bbox = box(point(${bbox[0]}, ${bbox[1]}), point(${bbox[2]}, ${bbox[3]}))
-    WHERE id = ${geometryId}`;
+/** Replace a geometry's canonical boxes (idempotent — safe on re-finalize). */
+export async function setBboxes(
+  prisma: PrismaClient,
+  geometryId: string,
+  boxes: Bbox[]
+): Promise<void> {
+  await prisma.geometryBox.deleteMany({ where: { geometryId } });
+  for (const b of boxes) {
+    await prisma.$executeRaw`
+      INSERT INTO "GeometryBox" (id, "geometryId", box)
+      VALUES (gen_random_uuid()::text, ${geometryId}, box(point(${b[0]}, ${b[1]}), point(${b[2]}, ${b[3]})))`;
+  }
 }

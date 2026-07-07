@@ -127,7 +127,7 @@ export function entryRoutes(app: FastifyInstance): void {
         crsId: g.crsId,
         label: g.label,
         status: deriveStatus(g),
-        bbox: bboxes.get(g.id) ?? null,
+        bboxes: bboxes.get(g.id) ?? [],
         properties: g.properties ?? null,
       })),
       dateRanges: entry.dateRanges.map((r) => ({

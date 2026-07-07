@@ -5,8 +5,8 @@ Running the backend, talking to it, and looking inside it while it runs.
 ## Prerequisites
 
 - Node 20+ (`node --version`)
-- Podman with the docker shim (this machine's `docker` *is* podman) — or real
-  Docker; everything below works the same
+- Podman (all local container commands use `podman` directly; with real
+  Docker, substitute `docker` — everything below works the same)
 - `jq` (for `scripts/demo.sh` and pleasant curl output)
 
 ## First-time setup
@@ -17,14 +17,13 @@ npm run compose:up                                # postgres :5433, LocalStack :
 npm install --cache /tmp/npm-cache-sheaf          # see Troubleshooting for why --cache
 npx prisma migrate deploy                         # apply schema to the dev DB
 npx prisma generate
-docker exec sheaf_localstack_1 awslocal s3 mb s3://sheaf-dev
-docker exec sheaf_localstack_1 awslocal s3api put-bucket-versioning \
-  --bucket sheaf-dev --versioning-configuration Status=Enabled
-cp .env.example .env
+cp .env.example .env                              # npm run dev loads this automatically
 ```
 
-Versioning on the dev bucket is optional but recommended — it's what gives
-you file-level edit history for free.
+Buckets (`sheaf-dev`, `sheaf-test`) are created — versioning enabled — by a
+LocalStack boot hook (`docker/localstack-init.sh`) on every container start;
+community LocalStack keeps S3 state in memory, so they'd otherwise vanish on
+restart. Postgres data survives restarts via the `sheaf-pgdata` volume.
 
 ## Everyday commands
 
@@ -38,7 +37,7 @@ npm run compose:down # stop containers (data volumes persist)
 Readiness after `compose:up` (podman-compose has no `--wait`):
 
 ```sh
-docker exec sheaf_postgres_1 pg_isready -U sheaf
+podman exec sheaf_postgres_1 pg_isready -U sheaf
 curl -s localhost:4566/_localstack/health | jq .services.s3
 ```
 
@@ -61,11 +60,13 @@ Three options, pick your poison:
 ```sh
 BASE=http://localhost:3000
 
-# 1. A world and a CRS to draw in
+# 1. A world, a globe (sphere), and a CRS (a projection of it) to draw in
 WORLD=$(curl -s -X POST $BASE/worlds -H 'content-type: application/json' \
   -d '{"name":"Aldervane"}' | jq -r .id)
-CRS=$(curl -s -X POST $BASE/worlds/$WORLD/crs -H 'content-type: application/json' \
-  -d '{"name":"main","params":{"projection":"equirectangular"}}' | jq -r .id)
+GLOBE=$(curl -s -X POST $BASE/worlds/$WORLD/globes -H 'content-type: application/json' \
+  -d '{"name":"terra","params":{"radius":57.29578}}' | jq -r .id)
+CRS=$(curl -s -X POST $BASE/globes/$GLOBE/crs -H 'content-type: application/json' \
+  -d '{"name":"main","params":{"type":"equirectangular"}}' | jq -r .id)
 
 # 2. An entry
 ENTRY=$(curl -s -X POST $BASE/worlds/$WORLD/entries -H 'content-type: application/json' \
@@ -119,20 +120,20 @@ container — no local AWS CLI needed:
 ```sh
 # What's in the bucket? Keys mirror the DB's filePath convention:
 # worlds/<worldId>/entries/<entryId>/<kind>/<artifactId>.<ext>
-docker exec sheaf_localstack_1 awslocal s3 ls s3://sheaf-dev --recursive --human-readable
+podman exec sheaf_localstack_1 awslocal s3 ls s3://sheaf-dev --recursive --human-readable
 
 # Read an object
-docker exec sheaf_localstack_1 awslocal s3 cp \
+podman exec sheaf_localstack_1 awslocal s3 cp \
   "s3://sheaf-dev/worlds/<…>/documents/<…>.md" -
 
 # Edit history (needs bucket versioning enabled — re-upload + finalize an
 # artifact and you'll see multiple versions of the same key)
-docker exec sheaf_localstack_1 awslocal s3api list-object-versions \
+podman exec sheaf_localstack_1 awslocal s3api list-object-versions \
   --bucket sheaf-dev --prefix "worlds/" \
   | jq '.Versions[] | {Key, VersionId, LastModified, IsLatest}'
 
 # Fetch a specific old version
-docker exec sheaf_localstack_1 awslocal s3api get-object \
+podman exec sheaf_localstack_1 awslocal s3api get-object \
   --bucket sheaf-dev --key "<key>" --version-id "<versionId>" /tmp/old.md
 ```
 
@@ -146,7 +147,7 @@ the path — you can eyeball which DB row maps to which object.
 ## Investigating the database
 
 ```sh
-docker exec -it sheaf_postgres_1 psql -U sheaf -d sheaf
+podman exec -it sheaf_postgres_1 psql -U sheaf -d sheaf
 ```
 
 Useful looks:
@@ -180,6 +181,7 @@ mid-test-debugging.
 | `npm install` fails EACCES/EEXIST in `~/.npm/_cacache` | Root-owned entries from an old `sudo npm`. Either `sudo chown -R 501:20 ~/.npm` once, or keep using `--cache /tmp/npm-cache-sheaf` |
 | Presigned PUT returns 400 `x-amz-checksum-crc32 header is invalid` | AWS SDK ≥3.729 flexible-checksum default. Already disabled in `src/lib/storage.ts` (`requestChecksumCalculation: 'WHEN_REQUIRED'`) — if you build another S3 client, do the same |
 | `prisma migrate dev` hangs after applying | Environment quirk. Use `--create-only` + `prisma migrate deploy` instead |
-| Port 5433/4566 already bound | Another compose project; `docker ps` and stop it, or change ports in `docker-compose.yml` + `.env` |
-| `/healthz` returns 503 | DB or bucket unreachable — check containers, and that `sheaf-dev` bucket exists |
+| Port 5433/4566 already bound | Another compose project; `podman ps` and stop it, or change ports in `docker-compose.yml` + `.env` |
+| `docker: command not found` in npm scripts | `docker` is only a zsh alias here — non-interactive shells don't see it. Local scripts/docs use `podman` directly for this reason |
+| `/healthz` returns 503 | Body says which probe failed (`db` / `storage`). `db: false` usually means `.env` wasn't loaded (run via `npm run dev`, not bare `tsx`) or containers are down; `storage: false` means LocalStack is down or the bucket is missing |
 | Artifact stuck `failed` | Upload window expired before upload. `POST /<kind>/:id/upload-url` for a fresh window, PUT, finalize |

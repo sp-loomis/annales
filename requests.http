@@ -5,6 +5,8 @@
 @base = http://localhost:3000
 @worldId = PASTE-WORLD-ID
 @entryId = PASTE-ENTRY-ID
+@globeId = PASTE-GLOBE-ID
+@timelineId = PASTE-TIMELINE-ID
 @crsId = PASTE-CRS-ID
 @calendarId = PASTE-CALENDAR-ID
 @typeId = PASTE-RELATION-TYPE-ID
@@ -37,14 +39,26 @@ DELETE {{base}}/worlds/{{worldId}}
 
 ### ---------- World config ----------
 
-### Create CRS
-POST {{base}}/worlds/{{worldId}}/crs
+### Create globe (sphere; radius 180/π makes projected units = degrees)
+POST {{base}}/worlds/{{worldId}}/globes
 Content-Type: application/json
 
-{ "name": "main", "params": { "projection": "equirectangular" } }
+{ "name": "terra", "params": { "radius": 57.29578 } }
+
+### Create CRS (a projection of the globe)
+POST {{base}}/globes/{{globeId}}/crs
+Content-Type: application/json
+
+{ "name": "main", "params": { "type": "equirectangular" } }
+
+### Create timeline (tick axis)
+POST {{base}}/worlds/{{worldId}}/timelines
+Content-Type: application/json
+
+{ "name": "the ages" }
 
 ### Create calendar (arithmetic)
-POST {{base}}/worlds/{{worldId}}/calendars
+POST {{base}}/timelines/{{timelineId}}/calendars
 Content-Type: application/json
 
 {
@@ -54,7 +68,7 @@ Content-Type: application/json
 }
 
 ### Create calendar (ordinal, anchored + unanchored stages)
-POST {{base}}/worlds/{{worldId}}/calendars
+POST {{base}}/timelines/{{timelineId}}/calendars
 Content-Type: application/json
 
 {
@@ -70,10 +84,16 @@ Content-Type: application/json
 { "name": "located-in", "inverseName": "contains" }
 
 ### Lists
-GET {{base}}/worlds/{{worldId}}/crs
+GET {{base}}/worlds/{{worldId}}/globes
 
 ###
-GET {{base}}/worlds/{{worldId}}/calendars
+GET {{base}}/globes/{{globeId}}/crs
+
+###
+GET {{base}}/worlds/{{worldId}}/timelines
+
+###
+GET {{base}}/timelines/{{timelineId}}/calendars
 
 ###
 GET {{base}}/worlds/{{worldId}}/relation-types
@@ -182,8 +202,8 @@ GET {{base}}/worlds/{{worldId}}/search?q=shattered
 ### Compose filters (all AND)
 GET {{base}}/worlds/{{worldId}}/search?q=shattered&tag=coastal&type=region
 
-### Geo bbox overlap — stage 1 GiST; add &exact=true for the turf stage-2 pass
-GET {{base}}/worlds/{{worldId}}/search?bbox=5,5,15,15&crsId={{crsId}}
+### Geo bbox overlap (canonical lng/lat, scoped by globe) — stage 1 GiST; add &exact=true for turf stage-2
+GET {{base}}/worlds/{{worldId}}/search?bbox=5,-9,15,-1&globeId={{globeId}}
 
-### Date overlap on the tick line
-GET {{base}}/worlds/{{worldId}}/search?tickStart=50&tickEnd=70
+### Date overlap on the tick line (scoped by timeline)
+GET {{base}}/worlds/{{worldId}}/search?tickStart=50&tickEnd=70&timelineId={{timelineId}}

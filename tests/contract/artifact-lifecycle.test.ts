@@ -8,6 +8,7 @@ import {
   downloadFrom,
   createWorld,
   createEntry,
+  createGlobe,
   createCrs,
 } from '../helpers.js';
 import { PNG_1X1, rectFeature, excalidrawScene } from '../fixtures.js';
@@ -63,8 +64,9 @@ beforeEach(resetDb);
 async function makeEntryCtx(theApp: FastifyInstance = app) {
   const w = await createWorld(theApp);
   const entry = await createEntry(theApp, w.id);
-  const crs = await createCrs(theApp, w.id);
-  return { worldId: w.id, entryId: entry.id, crsId: crs.id };
+  const globe = await createGlobe(theApp, w.id);
+  const crs = await createCrs(theApp, globe.id);
+  return { worldId: w.id, entryId: entry.id, globeId: globe.id, crsId: crs.id };
 }
 
 describe.each(KINDS)('$kind lifecycle', ({ kind, createBody, payload, contentType }) => {

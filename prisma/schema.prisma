@@ -8,12 +8,38 @@ datasource db {
 }
 
 model World {
-  id            String          @id @default(uuid())
+  id            String         @id @default(uuid())
   name          String
   entries       Entry[]
-  crs           CrsDefinition[]
-  calendars     Calendar[]
+  globes        Globe[]
+  timelines     Timeline[]
   relationTypes RelationType[]
+}
+
+// A sphere grouping CRSs (its projections). Geometry bboxes canonicalize to
+// this globe's surface (lng/lat degrees, prime meridian 0).
+model Globe {
+  id      String          @id @default(uuid())
+  worldId String
+  name    String
+  params  Json
+  world   World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  crs     CrsDefinition[]
+
+  @@unique([worldId, name])
+}
+
+// A tick axis grouping calendars — a single tracker of fractional days from an
+// absolute epoch. params reserved (epoch mapping lives in calendars for now).
+model Timeline {
+  id        String     @id @default(uuid())
+  worldId   String
+  name      String
+  params    Json?
+  world     World      @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  calendars Calendar[]
+
+  @@unique([worldId, name])
 }
 
 model Entry {
@@ -82,30 +108,41 @@ model Sketch {
 }
 
 model Geometry {
-  id              String             @id @default(uuid())
+  id              String        @id @default(uuid())
   entryId         String
   crsId           String
-  filePath        String             @unique
+  filePath        String        @unique
   label           String?
   properties      Json?
-  // Derived from the file at finalize; null while pending. Native box +
-  // GiST index (added by hand in the migration — Prisma can't declare it).
-  bbox            Unsupported("box")?
-  status          String             @default("pending")
+  status          String        @default("pending")
   uploadExpiresAt DateTime?
-  entry           Entry              @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  crs             CrsDefinition      @relation(fields: [crsId], references: [id], onDelete: Restrict)
+  entry           Entry         @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  crs             CrsDefinition @relation(fields: [crsId], references: [id], onDelete: Restrict)
+  // Canonical lng/lat bbox(es), derived at finalize; empty while pending. 1 box
+  // normally, 2 across the antimeridian. GiST index hand-added in the migration.
+  boxes           GeometryBox[]
 }
 
+model GeometryBox {
+  id         String             @id @default(uuid())
+  geometryId String
+  box        Unsupported("box")
+  geometry   Geometry           @relation(fields: [geometryId], references: [id], onDelete: Cascade)
+
+  @@index([geometryId])
+}
+
+// A projection of its globe's sphere. params is a d3-geo projection spec:
+// { type, rotate: [lambda, phi, gamma], clipAngle }.
 model CrsDefinition {
   id         String     @id @default(uuid())
-  worldId    String
+  globeId    String
   name       String
   params     Json
-  world      World      @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  globe      Globe      @relation(fields: [globeId], references: [id], onDelete: Cascade)
   geometries Geometry[]
 
-  @@unique([worldId, name])
+  @@unique([globeId, name])
 }
 
 model DateRange {
@@ -125,14 +162,14 @@ model DateRange {
 
 model Calendar {
   id         String      @id @default(uuid())
-  worldId    String
+  timelineId String
   name       String
   type       String
   definition Json
-  world      World       @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  timeline   Timeline    @relation(fields: [timelineId], references: [id], onDelete: Cascade)
   dateRanges DateRange[]
 
-  @@unique([worldId, name])
+  @@unique([timelineId, name])
 }
 
 model RelationType {

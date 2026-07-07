@@ -7,6 +7,26 @@ CREATE TABLE "World" (
 );
 
 -- CreateTable
+CREATE TABLE "Globe" (
+    "id" TEXT NOT NULL,
+    "worldId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "params" JSONB NOT NULL,
+
+    CONSTRAINT "Globe_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Timeline" (
+    "id" TEXT NOT NULL,
+    "worldId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "params" JSONB,
+
+    CONSTRAINT "Timeline_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Entry" (
     "id" TEXT NOT NULL,
     "type" TEXT NOT NULL,
@@ -72,7 +92,6 @@ CREATE TABLE "Geometry" (
     "filePath" TEXT NOT NULL,
     "label" TEXT,
     "properties" JSONB,
-    "bbox" box,
     "status" TEXT NOT NULL DEFAULT 'pending',
     "uploadExpiresAt" TIMESTAMP(3),
 
@@ -80,9 +99,18 @@ CREATE TABLE "Geometry" (
 );
 
 -- CreateTable
+CREATE TABLE "GeometryBox" (
+    "id" TEXT NOT NULL,
+    "geometryId" TEXT NOT NULL,
+    "box" box NOT NULL,
+
+    CONSTRAINT "GeometryBox_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "CrsDefinition" (
     "id" TEXT NOT NULL,
-    "worldId" TEXT NOT NULL,
+    "globeId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "params" JSONB NOT NULL,
 
@@ -105,7 +133,7 @@ CREATE TABLE "DateRange" (
 -- CreateTable
 CREATE TABLE "Calendar" (
     "id" TEXT NOT NULL,
-    "worldId" TEXT NOT NULL,
+    "timelineId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "definition" JSONB NOT NULL,
@@ -146,6 +174,12 @@ CREATE TABLE "SearchIndex" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Globe_worldId_name_key" ON "Globe"("worldId", "name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Timeline_worldId_name_key" ON "Timeline"("worldId", "name");
+
+-- CreateIndex
 CREATE INDEX "Entry_worldId_type_idx" ON "Entry"("worldId", "type");
 
 -- CreateIndex
@@ -164,7 +198,10 @@ CREATE UNIQUE INDEX "Sketch_filePath_key" ON "Sketch"("filePath");
 CREATE UNIQUE INDEX "Geometry_filePath_key" ON "Geometry"("filePath");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CrsDefinition_worldId_name_key" ON "CrsDefinition"("worldId", "name");
+CREATE INDEX "GeometryBox_geometryId_idx" ON "GeometryBox"("geometryId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CrsDefinition_globeId_name_key" ON "CrsDefinition"("globeId", "name");
 
 -- CreateIndex
 CREATE INDEX "DateRange_tickStart_idx" ON "DateRange"("tickStart");
@@ -173,7 +210,7 @@ CREATE INDEX "DateRange_tickStart_idx" ON "DateRange"("tickStart");
 CREATE INDEX "DateRange_tickEnd_idx" ON "DateRange"("tickEnd");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Calendar_worldId_name_key" ON "Calendar"("worldId", "name");
+CREATE UNIQUE INDEX "Calendar_timelineId_name_key" ON "Calendar"("timelineId", "name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "RelationType_worldId_name_key" ON "RelationType"("worldId", "name");
@@ -189,6 +226,12 @@ CREATE INDEX "SearchIndex_entryId_idx" ON "SearchIndex"("entryId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SearchIndex_sourceType_sourceId_key" ON "SearchIndex"("sourceType", "sourceId");
+
+-- AddForeignKey
+ALTER TABLE "Globe" ADD CONSTRAINT "Globe_worldId_fkey" FOREIGN KEY ("worldId") REFERENCES "World"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Timeline" ADD CONSTRAINT "Timeline_worldId_fkey" FOREIGN KEY ("worldId") REFERENCES "World"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Entry" ADD CONSTRAINT "Entry_worldId_fkey" FOREIGN KEY ("worldId") REFERENCES "World"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -212,7 +255,10 @@ ALTER TABLE "Geometry" ADD CONSTRAINT "Geometry_entryId_fkey" FOREIGN KEY ("entr
 ALTER TABLE "Geometry" ADD CONSTRAINT "Geometry_crsId_fkey" FOREIGN KEY ("crsId") REFERENCES "CrsDefinition"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CrsDefinition" ADD CONSTRAINT "CrsDefinition_worldId_fkey" FOREIGN KEY ("worldId") REFERENCES "World"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "GeometryBox" ADD CONSTRAINT "GeometryBox_geometryId_fkey" FOREIGN KEY ("geometryId") REFERENCES "Geometry"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CrsDefinition" ADD CONSTRAINT "CrsDefinition_globeId_fkey" FOREIGN KEY ("globeId") REFERENCES "Globe"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "DateRange" ADD CONSTRAINT "DateRange_entryId_fkey" FOREIGN KEY ("entryId") REFERENCES "Entry"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -221,7 +267,7 @@ ALTER TABLE "DateRange" ADD CONSTRAINT "DateRange_entryId_fkey" FOREIGN KEY ("en
 ALTER TABLE "DateRange" ADD CONSTRAINT "DateRange_calendarId_fkey" FOREIGN KEY ("calendarId") REFERENCES "Calendar"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Calendar" ADD CONSTRAINT "Calendar_worldId_fkey" FOREIGN KEY ("worldId") REFERENCES "World"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Calendar" ADD CONSTRAINT "Calendar_timelineId_fkey" FOREIGN KEY ("timelineId") REFERENCES "Timeline"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "RelationType" ADD CONSTRAINT "RelationType_worldId_fkey" FOREIGN KEY ("worldId") REFERENCES "World"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -235,6 +281,7 @@ ALTER TABLE "Relation" ADD CONSTRAINT "Relation_toId_fkey" FOREIGN KEY ("toId") 
 -- AddForeignKey
 ALTER TABLE "Relation" ADD CONSTRAINT "Relation_typeId_fkey" FOREIGN KEY ("typeId") REFERENCES "RelationType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
+
 -- Prisma cannot declare GiST/GIN indexes on Unsupported columns — added by hand.
-CREATE INDEX "Geometry_bbox_gist" ON "Geometry" USING GIST ("bbox");
+CREATE INDEX "GeometryBox_box_gist" ON "GeometryBox" USING GIST ("box");
 CREATE INDEX "SearchIndex_tsv_gin" ON "SearchIndex" USING GIN ("tsv");

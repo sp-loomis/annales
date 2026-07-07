@@ -17,12 +17,11 @@ only metadata and derived/cached fields.
 ## Quickstart
 
 ```sh
-podman machine start          # once per boot (docker here is a podman shim)
-npm run compose:up            # postgres :5433 + LocalStack S3 :4566
+podman machine start          # once per boot
+npm run compose:up            # postgres :5433 + LocalStack S3 :4566 (buckets auto-created)
 npm install --cache /tmp/npm-cache-sheaf   # see GUIDE.md → Troubleshooting
 npx prisma migrate deploy && npx prisma generate
-docker exec sheaf_localstack_1 awslocal s3 mb s3://sheaf-dev   # first time only
-cp .env.example .env
+cp .env.example .env          # npm run dev loads this automatically
 npm run dev                   # API on http://localhost:3000
 ```
 

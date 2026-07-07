@@ -40,14 +40,17 @@ state.
    uploader.
 5. **Map editing** — Leaflet + Geoman on the equirectangular canvas; draw /
    edit polygons and markers per entry; save as GeoJSON geometry artifacts;
-   CRS picker.
+   globe + CRS picker (CRS = a projection of the chosen globe).
 6. **Map display** — d3-geo projected views (azimuthal, orthographic);
-   bbox-driven loading via `search?bbox=`; `exact=true` for precise picking.
+   bbox-driven loading via `search?bbox=&globeId=`; `exact=true` for precise
+   picking. Canonical lng/lat bboxes are derived server-side at finalize.
 7. **Relations + graph** — relation editor on entry detail; graph view
    (`/entries/:id/graph`) rendered with something light (d3-force or
    cytoscape); `inverseName` for backward-edge labels.
-8. **Search + timeline** — global search box (snippets come highlighted from
-   the API); calendar/date-range editor; later a timeline view over ticks.
+8. **Search + chronology** — global search box (snippets come highlighted from
+   the API); calendar/date-range editor; later a chronology view over a
+   Timeline's ticks. (NB "Timeline" is now a data-model entity grouping
+   calendars — this UI view is a distinct, later concept.)
 
 ### Frontend-facing backend TODOs
 

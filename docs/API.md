@@ -17,9 +17,9 @@ object storage via presigned URLs). All ids are UUIDs.
 | 400 | `INVALID_PAYLOAD` | uploaded file fails semantic validation at finalize (bad GeoJSON, bad Excalidraw scene) |
 | 400 | `CROSS_WORLD` | relation endpoints span two worlds |
 | 404 | `NOT_FOUND` | resource or parent resource missing |
-| 409 | `CONFLICT` | unique violation (duplicate CRS/calendar name, duplicate relation) |
+| 409 | `CONFLICT` | unique violation (duplicate name within a globe/timeline/world scope, duplicate relation) |
 | 409 | `UPLOAD_MISSING` | finalize called but object not in storage |
-| 409 | `IN_USE` | deleting a CRS/calendar still referenced by geometries/date-ranges |
+| 409 | `IN_USE` | deleting a config row still referenced (CRS by geometries, calendar by date-ranges, globe by CRS, timeline by calendars) |
 
 **Timestamps** ISO-8601 UTC. **Lists** return `{ "items": [...], "nextCursor": string | null }`; `?limit=` (default 50, max 200) + `?cursor=`.
 
@@ -35,7 +35,7 @@ object storage via presigned URLs). All ids are UUIDs.
 | PATCH | `/worlds/:worldId` | `{name}` | 200 | 400, 404 |
 | DELETE | `/worlds/:worldId` | — | 204 | 404 |
 
-DELETE cascades: entries, artifacts (rows + stored objects), relations, CRS, calendars.
+DELETE cascades: entries, artifacts (rows + stored objects), relations, globes (→ CRS), timelines (→ calendars).
 
 ## Entries
 
@@ -59,11 +59,13 @@ DELETE cascades: entries, artifacts (rows + stored objects), relations, CRS, cal
   "images":     [ { "id": "…", "label": "banner", "status": "ready" } ],
   "sketches":   [ { "id": "…", "label": null, "status": "pending" } ],
   "geometries": [ { "id": "…", "crsId": "…", "label": "territory", "status": "ready",
-                    "bbox": [minX, minY, maxX, maxY], "properties": {} } ],
+                    "bboxes": [ [minLng, minLat, maxLng, maxLat] ], "properties": {} } ],
   "dateRanges": [ { "id": "…", "calendarId": "…", "rawComponents": {},
                     "tickStart": 1042.0, "tickEnd": 1043.5, "precisionTier": "exact" } ]
 }
 ```
+
+`geometries[].bboxes` is canonical lng/lat (`[minLng, minLat, maxLng, maxLat]`), one or two boxes, `[]` while `pending`. `dateRanges[]` unchanged.
 
 Entry DELETE cascades its artifacts (rows + objects) and any relations touching it.
 
@@ -105,7 +107,7 @@ it reports `pending` again. Search/index only ever sees `ready`.
 | Document | `{role, label?}` | UTF-8 text; derives tsvector |
 | Image | `{label?, contentType}` (`image/png`, `image/jpeg`, `image/webp`, `image/svg+xml`) | magic bytes match declared type; indexes label; generates thumbnail (sharp, max 512px long edge, webp) stored as a derived object next to the original — re-finalize regenerates it |
 | Sketch | `{label?}` | parses as Excalidraw scene JSON; derives tsvector from scene text elements + label |
-| Geometry | `{crsId, label?}` | parses as GeoJSON (Feature or FeatureCollection); derives bbox + caches `properties`; indexes label. 400 if crsId not in entry's world |
+| Geometry | `{crsId, label?}` | parses as GeoJSON (Feature or FeatureCollection); reprojects the authored coords through the CRS's projection to the globe's canonical lng/lat and derives `bboxes` (1 box, or 2 across the antimeridian); caches `properties`; indexes label. Create-time crsId checks: **404** if crsId unknown, **400 `CROSS_WORLD`** if the CRS's globe belongs to a different world than the entry. **400 `INVALID_PAYLOAD`** at finalize if a coordinate falls outside the projection's domain |
 
 ## Date ranges (no file — plain sub-resource)
 
@@ -131,7 +133,7 @@ an ordinal one). Unanchored ordinal → ticks null, `precisionTier: "ordinal"`.
 
 `inverseName` is the label for reading an edge backwards ("located-in" →
 "contains"); display-only, no semantics. Relations must reference a defined
-type — strict FK, same pattern as CRS/calendars.
+type — strict FK, IN_USE-guarded on delete like globes/timelines.
 
 ## Relations
 
@@ -142,18 +144,37 @@ type — strict FK, same pattern as CRS/calendars.
 | DELETE | `/relations/:id` | — | 204 | 404 |
 | GET | `/entries/:entryId/graph?depth=1..5&typeId=&direction=out\|in\|both` | — | 200 `{nodes: [{id, title, type, depth}], edges: [{id, fromId, toId, typeId}]}` — recursive CTE, breadth-limited; `direction` defaults to `both` | 400, 404 |
 
-## CRS definitions & calendars (per-world config, same shape)
+## Globes & timelines (per-world grouping)
+
+A **globe** is a sphere that groups CRSs (its projections); a **timeline** is a
+tick axis that groups calendars. Both are per-world config with a per-world
+unique name and an `IN_USE` delete guard — same shape as relation types.
 
 | Method | Path | Body | 2xx | Errors |
 |---|---|---|---|---|
-| POST | `/worlds/:worldId/crs` | `{name, params}` | 201 | 400, 404, 409 (name) |
-| GET | `/worlds/:worldId/crs` | — | 200 list | 404 |
-| GET | `/crs/:id` | — | 200 | 404 |
+| POST | `/worlds/:worldId/globes` | `{name, params}` (`params.radius`) | 201 | 400, 404, 409 (name) |
+| GET | `/worlds/:worldId/globes` | — | 200 list | 404 |
+| GET / PATCH / DELETE | `/globes/:id` | `{name?, params?}` | 200 / 200 / 204 | 404, 409 (`IN_USE` if CRS reference it) |
+
+Timelines identical at `/worlds/:worldId/timelines` + `/timelines/:id`, body
+`{name, params?}`, DELETE 409 `IN_USE` if calendars reference it.
+
+## CRS definitions & calendars (nested under globe / timeline)
+
+A CRS belongs to a globe; a calendar belongs to a timeline. Its world is the
+parent's world. Name is unique **per globe** (CRS) / **per timeline** (calendar).
+
+| Method | Path | Body | 2xx | Errors |
+|---|---|---|---|---|
+| POST | `/globes/:globeId/crs` | `{name, params}` | 201 | 400, 404 (globe), 409 (name in globe) |
+| GET | `/globes/:globeId/crs` | — | 200 list | 404 |
+| GET | `/crs/:id` | — | 200 `{id, globeId, name, params}` | 404 |
 | PATCH | `/crs/:id` | `{name?, params?}` | 200 | 400, 404, 409 |
 | DELETE | `/crs/:id` | — | 204 | 404, 409 `IN_USE` if geometries reference it |
 
-Calendars identical at `/worlds/:worldId/calendars` + `/calendars/:id`, body
-`{name, type, definition}`, DELETE 409 `IN_USE` if date-ranges reference it.
+Calendars identical at `/timelines/:timelineId/calendars` + `/calendars/:id`,
+body `{name, type, definition}`, serialized `{id, timelineId, name, type,
+definition}`, DELETE 409 `IN_USE` if date-ranges reference it.
 
 ## Search
 
@@ -162,9 +183,10 @@ GET /worlds/:worldId/search
     ?q=              full text (tsquery over SearchIndex)
     &type=           entry type
     &tag=            repeatable, AND semantics
-    &bbox=minX,minY,maxX,maxY   geometry bbox overlap (stage 1) — with &exact=true, turf.js intersection pass (stage 2)
-    &crsId=          required when bbox given
+    &bbox=minLng,minLat,maxLng,maxLat   canonical lng/lat; geometry bbox overlap over the globe (stage 1) — with &exact=true, turf.js intersection pass (stage 2)
+    &globeId=        required when bbox given — scopes the bbox search to one globe (compares all its CRSs in canonical frame)
     &tickStart=&tickEnd=        date-range overlap
+    &timelineId=     required when tickStart/tickEnd given — scopes the date search to one timeline
     &limit=&cursor=
 ```
 
@@ -191,9 +213,11 @@ Rank present only when `q` given; otherwise items ordered by `updatedAt` desc.
 
 ## Appendix: calendar definitions & tick semantics
 
-A **tick** is a fractional day count since the world epoch (tick 0). All
-calendars in a world convert into the same tick line — that's what makes
-cross-calendar date-range overlap queries meaningful.
+A **tick** is a fractional day count since the timeline's epoch (tick 0). All
+calendars in a **timeline** convert into that timeline's shared tick line —
+that's what makes cross-calendar date-range overlap queries meaningful (and why
+tick search is scoped by `timelineId`). Calendars in different timelines are not
+comparable.
 
 **`arithmetic`** — `definition: { months: [{ name, days }, …] }`. Year length
 = sum of month days. Year/month/day are 1-based; year 1 day 1 = tick 0. No

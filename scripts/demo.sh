@@ -22,14 +22,26 @@ WORLD_JSON=$(curl -s -X POST "$BASE/worlds" -H 'content-type: application/json' 
 show "$WORLD_JSON"
 WORLD=$(jq -r .id <<<"$WORLD_JSON")
 
-step "POST /worlds/:id/crs — a coordinate system (geometries require one)"
-CRS_JSON=$(curl -s -X POST "$BASE/worlds/$WORLD/crs" -H 'content-type: application/json' \
-  -d '{"name":"main","params":{"projection":"equirectangular"}}')
+step "POST /worlds/:id/globes — a sphere (groups CRSs; radius 180/π makes projected units = degrees)"
+GLOBE_JSON=$(curl -s -X POST "$BASE/worlds/$WORLD/globes" -H 'content-type: application/json' \
+  -d '{"name":"terra","params":{"radius":57.29578}}')
+show "$GLOBE_JSON"
+GLOBE=$(jq -r .id <<<"$GLOBE_JSON")
+
+step "POST /globes/:id/crs — a coordinate system (a projection of the globe; geometries require one)"
+CRS_JSON=$(curl -s -X POST "$BASE/globes/$GLOBE/crs" -H 'content-type: application/json' \
+  -d '{"name":"main","params":{"type":"equirectangular"}}')
 show "$CRS_JSON"
 CRS=$(jq -r .id <<<"$CRS_JSON")
 
-step "POST /worlds/:id/calendars — a 2×30-day arithmetic calendar"
-CAL_JSON=$(curl -s -X POST "$BASE/worlds/$WORLD/calendars" -H 'content-type: application/json' \
+step "POST /worlds/:id/timelines — a tick axis (groups calendars)"
+TL_JSON=$(curl -s -X POST "$BASE/worlds/$WORLD/timelines" -H 'content-type: application/json' \
+  -d '{"name":"the ages"}')
+show "$TL_JSON"
+TL=$(jq -r .id <<<"$TL_JSON")
+
+step "POST /timelines/:id/calendars — a 2×30-day arithmetic calendar"
+CAL_JSON=$(curl -s -X POST "$BASE/timelines/$TL/calendars" -H 'content-type: application/json' \
   -d '{"name":"common reckoning","type":"arithmetic","definition":{"months":[{"name":"Frostwane","days":30},{"name":"Sunreach","days":30}]}}')
 show "$CAL_JSON"
 CAL=$(jq -r .id <<<"$CAL_JSON")
@@ -66,13 +78,14 @@ echo "uploaded."
 step "Artifact lifecycle 3/3 — finalize (validate, derive, index)"
 curl -s -X POST "$BASE/documents/$DOC/finalize" | jq '{id, status}'
 
-step "Same lifecycle for a geometry (territory polygon, bbox derived at finalize)"
+step "Same lifecycle for a geometry (territory polygon, canonical bboxes derived at finalize)"
 GEO_JSON=$(curl -s -X POST "$BASE/entries/$COAST/geometries" -H 'content-type: application/json' \
   -d "{\"crsId\":\"$CRS\",\"label\":\"territory\"}")
 GEO=$(jq -r .id <<<"$GEO_JSON")
 curl -sf -X PUT "$(jq -r .upload.url <<<"$GEO_JSON")" -H 'content-type: application/geo+json' \
   --data-binary '{"type":"Feature","properties":{"climate":"temperate"},"geometry":{"type":"Polygon","coordinates":[[[0,0],[10,0],[10,10],[0,10],[0,0]]]}}'
-curl -s -X POST "$BASE/geometries/$GEO/finalize" | jq '{id, status, bbox, properties}'
+# authored [0..10]×[0..10] → canonical lng [0,10], lat [-10,0] (d3 y-axis is down)
+curl -s -X POST "$BASE/geometries/$GEO/finalize" | jq '{id, status, bboxes, properties}'
 
 step "POST /entries/:id/date-ranges — server converts calendar date → ticks"
 curl -s -X POST "$BASE/entries/$COAST/date-ranges" -H 'content-type: application/json' \
@@ -89,11 +102,11 @@ curl -s "$BASE/entries/$COAST" | jq .
 step "GET search?q=shattered — full text with rank + highlighted snippet"
 curl -s "$BASE/worlds/$WORLD/search?q=shattered" | jq .
 
-step "GET search?bbox=5,5,15,15&crsId=… — geo overlap (GiST stage 1)"
-curl -s "$BASE/worlds/$WORLD/search?bbox=5,5,15,15&crsId=$CRS" | jq '.items[].title'
+step "GET search?bbox=5,-9,15,-1&globeId=… — canonical geo overlap over the globe (GiST stage 1)"
+curl -s "$BASE/worlds/$WORLD/search?bbox=5,-9,15,-1&globeId=$GLOBE" | jq '.items[].title'
 
-step "GET search?tickStart=50&tickEnd=70 — date overlap"
-curl -s "$BASE/worlds/$WORLD/search?tickStart=50&tickEnd=70" | jq '.items[].title'
+step "GET search?tickStart=50&tickEnd=70&timelineId=… — date overlap within the timeline"
+curl -s "$BASE/worlds/$WORLD/search?tickStart=50&tickEnd=70&timelineId=$TL" | jq '.items[].title'
 
 step "GET /entries/:id/graph — traversal from the Old Kingdom, inbound"
 curl -s "$BASE/entries/$KINGDOM/graph?depth=2&direction=in" | jq .
@@ -107,8 +120,8 @@ cat <<EOF
 World id: $WORLD
 
 Peek at the stored objects (keys mirror worlds/<world>/entries/<entry>/<kind>/):
-  docker exec sheaf_localstack_1 awslocal s3 ls s3://sheaf-dev --recursive
+  podman exec sheaf_localstack_1 awslocal s3 ls s3://sheaf-dev --recursive
 And the derived search index:
-  docker exec sheaf_postgres_1 psql -U sheaf -d sheaf \\
+  podman exec sheaf_postgres_1 psql -U sheaf -d sheaf \\
     -c 'SELECT "sourceType", left(text, 50) FROM "SearchIndex";'
 EOF

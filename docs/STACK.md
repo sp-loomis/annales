@@ -27,6 +27,32 @@ Core rule: files on disk (via `ContentStore`) are the source of truth for all cr
 model World {
   id   String @id @default(uuid())
   name String                                    // not null
+  // World organizes entries. Coordinate space and time axis are NOT
+  // world-global: a world has many Globes (each a sphere, grouping CRSs)
+  // and many Timelines (each a tick axis, grouping calendars).
+}
+
+// A sphere. Its CRSs are projections of it; geometry bboxes are canonicalized
+// to this globe's surface (lng/lat degrees, prime meridian fixed at 0) so a
+// bbox search over the globe compares every CRS in one frame. Different globes
+// are genuinely separate spaces — cross-globe geo search is not meaningful.
+model Globe {
+  id      String @id @default(uuid())
+  worldId String                                 // not null, FK -> World
+  name    String                                 // not null
+  params  Json                                   // not null — { radius, ... }
+  @@unique([worldId, name])
+}
+
+// A tick axis: a single tracker of (fractional) days from an absolute epoch.
+// Its calendars all convert into this timeline's shared tick line. Different
+// timelines are separate axes — cross-timeline date overlap is not meaningful.
+model Timeline {
+  id      String @id @default(uuid())
+  worldId String                                 // not null, FK -> World
+  name    String                                 // not null
+  params  Json?                                  // nullable — reserved (epoch mapping lives in calendars for now)
+  @@unique([worldId, name])
 }
 
 model Entry {
@@ -62,9 +88,10 @@ model Image {
   label    String?                              // nullable
 }
 
-// User-defined edge vocabulary, per world — same pattern as CrsDefinition/
-// Calendar. inverseName is the backwards-reading label ("located-in" →
-// "contains"), display-only.
+// User-defined edge vocabulary, per world. inverseName is the backwards-reading
+// label ("located-in" → "contains"), display-only. (CRS/Calendar are no longer
+// world-scoped siblings — they nest under Globe/Timeline; RelationType stays
+// directly per-world.)
 model RelationType {
   id          String  @id @default(uuid())
   worldId     String                             // not null, FK -> World
@@ -95,20 +122,33 @@ model Geometry {
   id         String @id @default(uuid())
   entryId    String                              // not null, FK
   crsId      String                              // not null, FK — geometry is meaningless without it
-  filePath   String @unique                      // not null — raw GeoJSON lives here
+  filePath   String @unique                      // not null — raw GeoJSON lives here (authored coords, CRS's projected plane)
   label      String?                             // nullable — "territory outline", "capital marker", etc.
   properties Json?                               // nullable, cached from file — elevation, climate band, etc.
-  bbox       Unsupported("box")                  // not null, derived from file at index time —
-                                                   //   native Postgres box type + GiST index,
-                                                   //   the real R-tree-equivalent (see indexing notes)
+  boxes      GeometryBox[]                       // derived at finalize — canonical lng/lat bbox(es)
 }
 
+// Canonical bbox of a geometry, on its globe's surface (lng/lat degrees).
+// A geometry has 1 box normally, or 2 when its canonical extent crosses the
+// antimeridian (a pole-enclosing extent widens to a single full-longitude box).
+// Native Postgres box + GiST index (the real R-tree-equivalent) — reprojected
+// from the authored coords via the CRS's d3-geo projection at finalize time.
+model GeometryBox {
+  id         String @id @default(uuid())
+  geometryId String                              // not null, FK -> Geometry
+  box        Unsupported("box")                  // not null — GiST-indexed (see indexing notes)
+  @@index([geometryId])
+}
+
+// A projection of its globe's sphere. params is a d3-geo projection spec:
+// { type, rotate: [lambda, phi, gamma], clipAngle }. Geometries are authored
+// in this projected plane; finalize inverts to the globe's canonical lng/lat.
 model CrsDefinition {
   id      String @id @default(uuid())
-  worldId String                                 // not null, FK -> World
+  globeId String                                 // not null, FK -> Globe (world reached via globe)
   name    String                                 // not null
-  params  Json                                   // not null — rotation, projection type, clipAngle
-  @@unique([worldId, name])
+  params  Json                                   // not null — { type, rotate, clipAngle, ... }
+  @@unique([globeId, name])
 }
 
 // Symmetric with Geometry: an entry may have zero, one, or many date
@@ -128,11 +168,11 @@ model DateRange {
 
 model Calendar {
   id         String @id @default(uuid())
-  worldId    String                              // not null, FK -> World
+  timelineId String                              // not null, FK -> Timeline (world reached via timeline)
   name       String                              // not null
   type       String                              // not null — 'arithmetic' | 'table' | 'ordinal'
   definition Json                                // not null — rule set specific to type
-  @@unique([worldId, name])
+  @@unique([timelineId, name])
 }
 
 // Payload lives in a file (same versioning-via-storage-backend reasoning
@@ -170,8 +210,8 @@ model SearchIndex {
 
 | Query | Mechanism | Notes |
 |---|---|---|
-| Geo bbox overlap | Native `box` type + **GiST** index, `&&` operator | Core Postgres, no PostGIS/extension needed — this is the real R-tree-equivalent (jointly indexes both dimensions, not two separate axis scans) |
-| Date range overlap | Plain btree on `tickStart`/`tickEnd` | 1D interval overlap doesn't need a special index type |
+| Geo bbox overlap | `GeometryBox.box` (native `box`) + **GiST** index, `&&` operator | Core Postgres, no PostGIS. Boxes are **canonical lng/lat** (reprojected at finalize), so one `&&` query compares every CRS under a globe in one frame. Scoped by `globeId` (join `Geometry → CrsDefinition`); a geometry contributes 1–2 boxes (antimeridian split) and the query box is split the same way, OR'd. A pole-enclosing extent → full-longitude box; the enclosed pole is found exactly by projecting the poles into the CRS plane (point-in-polygon), not by a latitude-sign guess. Geometry that encloses a projection singularity is out of scope for the `exact=true` refinement for now — see ARCHITECTURE.md |
+| Date range overlap | Plain btree on `tickStart`/`tickEnd`, scoped by `timelineId` (join `DateRange → Calendar`) | 1D interval overlap doesn't need a special index type; timeline join keeps ticks comparable |
 | Full text | `SearchIndex.tsv` column + **GIN** index, `@@` operator | Unified across artifact types via per-type extraction at index-build time: `Document` → strip markdown, tokenize; `Sketch`/`Image`/`Geometry` → index `label` if set, plus (for `Sketch`) the `text` fields pulled out of the scene JSON. `tsvector`/GIN = Postgres's built-in normalized/stemmed text representation + inverted index, the equivalent of SQLite FTS5. Never a live copy of raw body text — always derived at index time from the file/field |
 | Tag / world_id / type | Plain btree / composite PK | Simple equality filters |
 

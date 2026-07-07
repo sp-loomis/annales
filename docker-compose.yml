@@ -9,6 +9,7 @@ services:
       POSTGRES_DB: sheaf
     volumes:
       - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - sheaf-pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sheaf"]
       interval: 2s
@@ -21,8 +22,15 @@ services:
       - "4566:4566"
     environment:
       SERVICES: s3
+    volumes:
+      # ready-hook recreates buckets on every boot (community LocalStack
+      # keeps S3 state in memory only)
+      - ./docker/localstack-init.sh:/etc/localstack/init/ready.d/init.sh
     healthcheck:
       test: ["CMD-SHELL", "awslocal s3 ls"]
       interval: 2s
       timeout: 5s
       retries: 15
+
+volumes:
+  sheaf-pgdata:
