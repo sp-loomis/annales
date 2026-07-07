@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: sheaf
+      POSTGRES_PASSWORD: sheaf
+      POSTGRES_DB: sheaf
+    volumes:
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sheaf"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  localstack:
+    image: localstack/localstack:3
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: s3
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal s3 ls"]
+      interval: 2s
+      timeout: 5s
+      retries: 15

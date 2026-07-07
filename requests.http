@@ -1,0 +1,189 @@
+# Sheaf API scratchpad — VS Code "REST Client" extension / IntelliJ HTTP client.
+# Fire requests top to bottom; paste ids from responses into the variables.
+# Full contract: docs/API.md
+
+@base = http://localhost:3000
+@worldId = PASTE-WORLD-ID
+@entryId = PASTE-ENTRY-ID
+@crsId = PASTE-CRS-ID
+@calendarId = PASTE-CALENDAR-ID
+@typeId = PASTE-RELATION-TYPE-ID
+
+### Health
+GET {{base}}/healthz
+
+### ---------- Worlds ----------
+
+### Create world
+POST {{base}}/worlds
+Content-Type: application/json
+
+{ "name": "Aldervane" }
+
+### List worlds
+GET {{base}}/worlds
+
+### Get / rename / delete
+GET {{base}}/worlds/{{worldId}}
+
+### Rename
+PATCH {{base}}/worlds/{{worldId}}
+Content-Type: application/json
+
+{ "name": "Aldervane Reborn" }
+
+### Delete (cascades entries, artifacts, stored objects)
+DELETE {{base}}/worlds/{{worldId}}
+
+### ---------- World config ----------
+
+### Create CRS
+POST {{base}}/worlds/{{worldId}}/crs
+Content-Type: application/json
+
+{ "name": "main", "params": { "projection": "equirectangular" } }
+
+### Create calendar (arithmetic)
+POST {{base}}/worlds/{{worldId}}/calendars
+Content-Type: application/json
+
+{
+  "name": "common reckoning",
+  "type": "arithmetic",
+  "definition": { "months": [ { "name": "Frostwane", "days": 30 }, { "name": "Sunreach", "days": 30 } ] }
+}
+
+### Create calendar (ordinal, anchored + unanchored stages)
+POST {{base}}/worlds/{{worldId}}/calendars
+Content-Type: application/json
+
+{
+  "name": "the ages",
+  "type": "ordinal",
+  "definition": { "stages": [ { "name": "First Age", "tickStart": 0, "tickEnd": 10000 }, { "name": "Age of Mist" } ] }
+}
+
+### Create relation type
+POST {{base}}/worlds/{{worldId}}/relation-types
+Content-Type: application/json
+
+{ "name": "located-in", "inverseName": "contains" }
+
+### Lists
+GET {{base}}/worlds/{{worldId}}/crs
+
+###
+GET {{base}}/worlds/{{worldId}}/calendars
+
+###
+GET {{base}}/worlds/{{worldId}}/relation-types
+
+### ---------- Entries ----------
+
+### Create entry
+POST {{base}}/worlds/{{worldId}}/entries
+Content-Type: application/json
+
+{ "type": "region", "title": "The Shattered Coast", "tags": ["coastal", "ruined"] }
+
+### List (filters: ?type=&tag=&limit=&cursor=)
+GET {{base}}/worlds/{{worldId}}/entries?limit=10
+
+### Detail — aggregates tags + all artifact metadata
+GET {{base}}/entries/{{entryId}}
+
+### Update
+PATCH {{base}}/entries/{{entryId}}
+Content-Type: application/json
+
+{ "title": "The Shattered Coast, Reforged" }
+
+### Replace tag set
+PUT {{base}}/entries/{{entryId}}/tags
+Content-Type: application/json
+
+{ "tags": ["coastal", "reborn"] }
+
+### Delete
+DELETE {{base}}/entries/{{entryId}}
+
+### ---------- Artifact lifecycle (documents shown; images/sketches/geometries identical) ----------
+# Step 1 — create returns { upload: { url } }. Step 2 — PUT payload to that
+# URL (raw HTTP, not this API). Step 3 — finalize.
+
+### 1. Create document
+POST {{base}}/entries/{{entryId}}/documents
+Content-Type: application/json
+
+{ "role": "body", "label": "main text" }
+
+### 2. Upload — paste the presigned URL from the response above
+PUT PASTE-UPLOAD-URL
+Content-Type: text/markdown
+
+# The Shattered Coast
+
+Salt and ruin.
+
+### 3. Finalize (validates payload, derives search index / bbox / thumbnail)
+POST {{base}}/documents/PASTE-DOC-ID/finalize
+
+### Read back (download = presigned GET; pending/failed → download null)
+GET {{base}}/documents/PASTE-DOC-ID
+
+### Fresh upload window (revive failed artifact, or replace content)
+POST {{base}}/documents/PASTE-DOC-ID/upload-url
+
+### Create image (finalize also derives a ≤512px webp thumbnail)
+POST {{base}}/entries/{{entryId}}/images
+Content-Type: application/json
+
+{ "contentType": "image/png", "label": "banner" }
+
+### Create sketch (payload must be Excalidraw scene JSON)
+POST {{base}}/entries/{{entryId}}/sketches
+Content-Type: application/json
+
+{ "label": "tavern layout" }
+
+### Create geometry (payload must be GeoJSON Feature/FeatureCollection)
+POST {{base}}/entries/{{entryId}}/geometries
+Content-Type: application/json
+
+{ "crsId": "{{crsId}}", "label": "territory" }
+
+### ---------- Date ranges ----------
+
+### Create (server computes ticks; see docs/API.md appendix)
+POST {{base}}/entries/{{entryId}}/date-ranges
+Content-Type: application/json
+
+{ "calendarId": "{{calendarId}}", "rawComponents": { "year": 2, "month": 1, "day": 1 }, "precisionTier": "exact" }
+
+### ---------- Relations ----------
+
+### Create edge
+POST {{base}}/relations
+Content-Type: application/json
+
+{ "fromId": "{{entryId}}", "toId": "PASTE-OTHER-ENTRY-ID", "typeId": "{{typeId}}" }
+
+### List an entry's edges (?direction=out|in|both&typeId=)
+GET {{base}}/entries/{{entryId}}/relations?direction=both
+
+### Graph traversal (?depth=1..5&direction=&typeId=)
+GET {{base}}/entries/{{entryId}}/graph?depth=2&direction=both
+
+### ---------- Search ----------
+
+### Full text (rank + highlighted snippets)
+GET {{base}}/worlds/{{worldId}}/search?q=shattered
+
+### Compose filters (all AND)
+GET {{base}}/worlds/{{worldId}}/search?q=shattered&tag=coastal&type=region
+
+### Geo bbox overlap — stage 1 GiST; add &exact=true for the turf stage-2 pass
+GET {{base}}/worlds/{{worldId}}/search?bbox=5,5,15,15&crsId={{crsId}}
+
+### Date overlap on the tick line
+GET {{base}}/worlds/{{worldId}}/search?tickStart=50&tickEnd=70

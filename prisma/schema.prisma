@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model World {
+  id            String          @id @default(uuid())
+  name          String
+  entries       Entry[]
+  crs           CrsDefinition[]
+  calendars     Calendar[]
+  relationTypes RelationType[]
+}
+
+model Entry {
+  id        String   @id @default(uuid())
+  type      String
+  title     String
+  worldId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  world         World      @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  tags          EntryTag[]
+  documents     Document[]
+  images        Image[]
+  sketches      Sketch[]
+  geometries    Geometry[]
+  dateRanges    DateRange[]
+  relationsFrom Relation[] @relation("RelationFrom")
+  relationsTo   Relation[] @relation("RelationTo")
+
+  @@index([worldId, type])
+}
+
+model EntryTag {
+  entryId String
+  tag     String
+  entry   Entry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@id([entryId, tag])
+  @@index([tag])
+}
+
+// File-backed artifacts (Document/Image/Sketch/Geometry) share the presigned
+// upload lifecycle: status 'pending' at create, 'ready' after finalize.
+// 'failed' is never stored — derived at read time from uploadExpiresAt.
+model Document {
+  id              String    @id @default(uuid())
+  entryId         String
+  role            String
+  label           String?
+  filePath        String    @unique
+  status          String    @default("pending")
+  uploadExpiresAt DateTime?
+  entry           Entry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+}
+
+model Image {
+  id              String    @id @default(uuid())
+  entryId         String
+  label           String?
+  contentType     String
+  filePath        String    @unique
+  status          String    @default("pending")
+  uploadExpiresAt DateTime?
+  entry           Entry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+}
+
+model Sketch {
+  id              String    @id @default(uuid())
+  entryId         String
+  label           String?
+  filePath        String    @unique
+  status          String    @default("pending")
+  uploadExpiresAt DateTime?
+  entry           Entry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+}
+
+model Geometry {
+  id              String             @id @default(uuid())
+  entryId         String
+  crsId           String
+  filePath        String             @unique
+  label           String?
+  properties      Json?
+  // Derived from the file at finalize; null while pending. Native box +
+  // GiST index (added by hand in the migration — Prisma can't declare it).
+  bbox            Unsupported("box")?
+  status          String             @default("pending")
+  uploadExpiresAt DateTime?
+  entry           Entry              @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  crs             CrsDefinition      @relation(fields: [crsId], references: [id], onDelete: Restrict)
+}
+
+model CrsDefinition {
+  id         String     @id @default(uuid())
+  worldId    String
+  name       String
+  params     Json
+  world      World      @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  geometries Geometry[]
+
+  @@unique([worldId, name])
+}
+
+model DateRange {
+  id            String   @id @default(uuid())
+  entryId       String
+  calendarId    String
+  rawComponents Json
+  tickStart     Float?
+  tickEnd       Float?
+  precisionTier String
+  entry         Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  calendar      Calendar @relation(fields: [calendarId], references: [id], onDelete: Restrict)
+
+  @@index([tickStart])
+  @@index([tickEnd])
+}
+
+model Calendar {
+  id         String      @id @default(uuid())
+  worldId    String
+  name       String
+  type       String
+  definition Json
+  world      World       @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  dateRanges DateRange[]
+
+  @@unique([worldId, name])
+}
+
+model RelationType {
+  id          String     @id @default(uuid())
+  worldId     String
+  name        String
+  inverseName String?
+  world       World      @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  relations   Relation[]
+
+  @@unique([worldId, name])
+}
+
+model Relation {
+  id     String       @id @default(uuid())
+  fromId String
+  toId   String
+  typeId String
+  from   Entry        @relation("RelationFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to     Entry        @relation("RelationTo", fields: [toId], references: [id], onDelete: Cascade)
+  type   RelationType @relation(fields: [typeId], references: [id], onDelete: Restrict)
+
+  @@unique([fromId, toId, typeId])
+  @@index([toId])
+}
+
+// One row per (artifact, extracted text). Both text and tsv are derived at
+// finalize time — text is kept so ts_headline can build snippets without a
+// storage round trip; the file remains the source of truth.
+// GIN index added by hand in the migration.
+model SearchIndex {
+  id         String                  @id @default(uuid())
+  entryId    String
+  sourceType String
+  sourceId   String
+  text       String
+  tsv        Unsupported("tsvector")
+
+  @@unique([sourceType, sourceId])
+  @@index([entryId])
+}

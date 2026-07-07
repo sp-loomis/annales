@@ -62,15 +62,26 @@ model Image {
   label    String?                              // nullable
 }
 
+// User-defined edge vocabulary, per world — same pattern as CrsDefinition/
+// Calendar. inverseName is the backwards-reading label ("located-in" →
+// "contains"), display-only.
+model RelationType {
+  id          String  @id @default(uuid())
+  worldId     String                             // not null, FK -> World
+  name        String                             // not null — "causes", "located-in", etc.
+  inverseName String?                            // nullable
+  @@unique([worldId, name])
+}
+
 // Graph edges. Versioning ("supersedes", "later-version-of") lives here
 // too, as typed relations — no separate version table for now. [PIN: revisit
 // if supersession chains need query performance beyond recursive CTEs.]
 model Relation {
-  id           String @id @default(uuid())
-  fromId       String                            // not null
-  toId         String                            // not null
-  relationType String                            // not null — "causes", "located-in",
-                                                   //   "member-of", "supersedes", etc.
+  id     String @id @default(uuid())
+  fromId String                                  // not null, FK -> Entry
+  toId   String                                  // not null, FK -> Entry
+  typeId String                                  // not null, FK -> RelationType
+  @@unique([fromId, toId, typeId])               // exact duplicates rejected
 }
 
 // An entry may have zero, one, or many geometries (a region can have a
