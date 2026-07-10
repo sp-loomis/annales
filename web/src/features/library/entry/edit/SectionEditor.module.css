@@ -36,7 +36,7 @@
 }
 
 .editor :global(.tiptap code) {
-  font-family: ui-monospace, 'SF Mono', monospace;
+  font-family: ui-monospace, "SF Mono", monospace;
   font-size: 0.85em;
   padding: 1px 5px;
   border-radius: var(--radius-s);
@@ -54,12 +54,13 @@
 .toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 2px;
   padding: 4px;
+  margin-bottom: 8px;
   background: var(--surface-0);
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
-  box-shadow: var(--shadow-popover);
 }
 
 .toolButton {

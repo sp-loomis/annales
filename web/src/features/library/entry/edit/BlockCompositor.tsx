@@ -1,9 +1,9 @@
 // Ordered artifact-block list in edit mode. dnd-kit handles reorder; the +
 // affordances insert Section/Image/Sketch blocks; sections support split at
-// cursor, merge with the next section, and duplicate. All structural changes
+// cursor, merge with the next section, and copy-body text. All structural changes
 // land in the draft — only image/sketch byte uploads run immediately.
 
-import { useRef, useState } from 'react';
+import { useRef, useState } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -11,44 +11,60 @@ import {
   closestCenter,
   useSensor,
   useSensors,
-} from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
 import {
   SortableContext,
   arrayMove,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import type { Editor } from '@tiptap/core';
-import { ArrowsMerge } from '@phosphor-icons/react';
-import { createArtifact, finalizeArtifact, uploadToPresigned } from '../../../../api/endpoints';
-import type { PMNode } from '../../../../api/types';
-import { useDraftStore } from '../../../../stores/draftStore';
-import { TextInput } from '../../../../components/TextInput';
-import { mergeDocs, splitDocAtCursor } from '../../../../lib/prosemirror';
-import { nextBlockKey, type BlockDraft } from './draft';
-import { SectionEditor } from './SectionEditor';
-import { BlockFrame } from './BlockFrame';
-import { InsertPicker } from './InsertPicker';
-import { ImageBlockEdit, type PendingUpload } from './ImageBlockEdit';
-import { SketchBlockEdit } from './SketchBlockEdit';
-import { TID } from '../../../../testids';
-import styles from './BlockCompositor.module.css';
+} from "@dnd-kit/sortable";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import type { Editor } from "@tiptap/core";
+import { ArrowsMerge } from "@phosphor-icons/react";
+import { createArtifact, finalizeArtifact, uploadToPresigned } from "../../../../api/endpoints";
+import type { PMNode } from "../../../../api/types";
+import { useDraftStore } from "../../../../stores/draftStore";
+import { TextInput } from "../../../../components/TextInput";
+import { mergeDocs, splitDocAtCursor } from "../../../../lib/prosemirror";
+import { nextBlockKey, type BlockDraft } from "./draft";
+import { SectionEditor } from "./SectionEditor";
+import { BlockFrame } from "./BlockFrame";
+import { InsertPicker } from "./InsertPicker";
+import { ImageBlockEdit, type PendingUpload } from "./ImageBlockEdit";
+import { SketchBlockEdit } from "./SketchBlockEdit";
+import { TID } from "../../../../testids";
+import styles from "./BlockCompositor.module.css";
 
 const EMPTY_SCENE = JSON.stringify({
-  type: 'excalidraw',
+  type: "excalidraw",
   version: 2,
-  source: 'sheaf',
+  source: "sheaf",
   elements: [],
   appState: {},
   files: {},
 });
 
+function pmNodeToText(node: PMNode | null | undefined): string {
+  if (!node) return "";
+  if ("text" in node && typeof node.text === "string") return node.text;
+  const children = Array.isArray(node.content) ? node.content : [];
+  if (children.length === 0) return "";
+  const isParagraphLike =
+    node.type === "paragraph" || node.type === "heading" || node.type === "blockquote";
+  const separator = isParagraphLike ? "\n\n" : "\n";
+  return children
+    .map((child) => pmNodeToText(child as PMNode))
+    .filter(Boolean)
+    .join(separator)
+    .trim();
+}
+
 export function BlockCompositor({ entryId }: { entryId: string }) {
   const draft = useDraftStore((s) => s.drafts[entryId]);
   const updateDraft = useDraftStore((s) => s.updateDraft);
   const editorsRef = useRef(new Map<string, Editor>());
+  const [toolbarVisibleByBlock, setToolbarVisibleByBlock] = useState<Record<string, boolean>>({});
   const [pendingUploads, setPendingUploads] = useState<Record<string, PendingUpload>>({});
   const [autoOpenSketch, setAutoOpenSketch] = useState<string | null>(null);
 
@@ -84,7 +100,7 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
 
   const insertSection = (afterKey: string | null) =>
     insertAt(afterKey, {
-      kind: 'section',
+      kind: "section",
       key: nextBlockKey(),
       label: null,
       labelDirty: false,
@@ -93,17 +109,17 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
     });
 
   const insertImage = async (afterKey: string | null, file: File) => {
-    const created = await createArtifact('images', entryId, { contentType: file.type });
+    const created = await createArtifact("images", entryId, { contentType: file.type });
     updateDraft(entryId, (d) => ({
       ...d,
-      createdArtifactIds: [...d.createdArtifactIds, { kind: 'images', id: created.id }],
+      createdArtifactIds: [...d.createdArtifactIds, { kind: "images", id: created.id }],
     }));
     setPendingUploads((p) => ({
       ...p,
       [created.id]: { file, presignedUrl: created.upload.url },
     }));
     insertAt(afterKey, {
-      kind: 'image',
+      kind: "image",
       key: created.id,
       imageId: created.id,
       label: null,
@@ -112,21 +128,21 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
   };
 
   const insertSketch = async (afterKey: string | null) => {
-    const created = await createArtifact('sketches', entryId, {});
+    const created = await createArtifact("sketches", entryId, {});
     updateDraft(entryId, (d) => ({
       ...d,
-      createdArtifactIds: [...d.createdArtifactIds, { kind: 'sketches', id: created.id }],
+      createdArtifactIds: [...d.createdArtifactIds, { kind: "sketches", id: created.id }],
     }));
     // A sketch must hold a valid scene before the drawer can round-trip it.
     await uploadToPresigned(
       created.upload.url,
-      new Blob([EMPTY_SCENE], { type: 'application/json' }),
-      'application/json'
+      new Blob([EMPTY_SCENE], { type: "application/json" }),
+      "application/json"
     );
-    await finalizeArtifact('sketches', created.id);
+    await finalizeArtifact("sketches", created.id);
     setAutoOpenSketch(created.id);
     insertAt(afterKey, {
-      kind: 'sketch',
+      kind: "sketch",
       key: created.id,
       sketchId: created.id,
       label: null,
@@ -137,40 +153,35 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
   const deleteBlock = (block: BlockDraft) =>
     updateDraft(entryId, (d) => {
       const blocks = d.blocks.filter((b) => b.key !== block.key);
-      if (block.kind === 'section' && block.sectionId) {
+      if (block.kind === "section" && block.sectionId) {
         return { ...d, blocks, deletedSectionIds: [...d.deletedSectionIds, block.sectionId] };
       }
-      if (block.kind === 'image') {
+      if (block.kind === "image") {
         return {
           ...d,
           blocks,
-          deletedArtifacts: [...d.deletedArtifacts, { kind: 'images', id: block.imageId }],
+          deletedArtifacts: [...d.deletedArtifacts, { kind: "images", id: block.imageId }],
         };
       }
-      if (block.kind === 'sketch') {
+      if (block.kind === "sketch") {
         return {
           ...d,
           blocks,
-          deletedArtifacts: [...d.deletedArtifacts, { kind: 'sketches', id: block.sketchId }],
+          deletedArtifacts: [...d.deletedArtifacts, { kind: "sketches", id: block.sketchId }],
         };
       }
       return { ...d, blocks };
     });
 
-  const duplicateSection = (block: BlockDraft & { kind: 'section' }) => {
+  const copySectionText = async (block: BlockDraft & { kind: "section" }) => {
     const editor = editorsRef.current.get(block.key);
-    const contentJson = editor ? (editor.getJSON() as PMNode) : block.contentJson;
-    insertAt(block.key, {
-      kind: 'section',
-      key: nextBlockKey(),
-      label: block.label,
-      labelDirty: false,
-      contentJson,
-      contentDirty: false,
-    });
+    const text = editor
+      ? editor.getText({ blockSeparator: "\n\n" }).trim()
+      : pmNodeToText(block.contentJson);
+    await navigator.clipboard.writeText(text);
   };
 
-  const splitSection = (block: BlockDraft & { kind: 'section' }) => {
+  const splitSection = (block: BlockDraft & { kind: "section" }) => {
     const editor = editorsRef.current.get(block.key);
     if (!editor) return;
     const { before, after } = splitDocAtCursor(editor);
@@ -183,7 +194,7 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
         idx,
         1,
         {
-          kind: 'section',
+          kind: "section",
           key: nextBlockKey(),
           sectionId: block.sectionId,
           label: block.label,
@@ -192,7 +203,7 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
           contentDirty: true,
         },
         {
-          kind: 'section',
+          kind: "section",
           key: nextBlockKey(),
           label: null,
           labelDirty: false,
@@ -204,7 +215,10 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
     });
   };
 
-  const mergeWithNext = (block: BlockDraft & { kind: 'section' }, nextBlock: BlockDraft & { kind: 'section' }) => {
+  const mergeWithNext = (
+    block: BlockDraft & { kind: "section" },
+    nextBlock: BlockDraft & { kind: "section" }
+  ) => {
     const editorA = editorsRef.current.get(block.key);
     const editorB = editorsRef.current.get(nextBlock.key);
     const docA = editorA ? (editorA.getJSON() as never) : block.contentJson;
@@ -214,7 +228,7 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
       if (idx === -1 || d.blocks[idx + 1]?.key !== nextBlock.key) return d;
       const blocks = [...d.blocks];
       blocks.splice(idx, 2, {
-        kind: 'section',
+        kind: "section",
         key: nextBlockKey(),
         sectionId: block.sectionId,
         label: block.label,
@@ -238,36 +252,48 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
         sensors={sensors}
         collisionDetection={closestCenter}
         modifiers={[restrictToVerticalAxis]}
-        onDragEnd={onDragEnd}
-      >
+        onDragEnd={onDragEnd}>
         <SortableContext items={blocks.map((b) => b.key)} strategy={verticalListSortingStrategy}>
           {blocks.map((block, index) => {
             const nextBlock = blocks[index + 1];
-            const canMerge = block.kind === 'section' && nextBlock?.kind === 'section';
+            const canMerge = block.kind === "section" && nextBlock?.kind === "section";
             return (
               <div key={block.key}>
                 <BlockFrame
                   blockKey={block.key}
                   onDelete={() => deleteBlock(block)}
-                  onDuplicate={
-                    block.kind === 'section' ? () => duplicateSection(block) : undefined
+                  onCopyText={
+                    block.kind === "section" ? () => void copySectionText(block) : undefined
                   }
-                  onSplit={block.kind === 'section' ? () => splitSection(block) : undefined}
-                >
-                  {block.kind === 'section' && (
+                  onSplit={block.kind === "section" ? () => splitSection(block) : undefined}
+                  toolbarVisible={
+                    block.kind === "section"
+                      ? (toolbarVisibleByBlock[block.key] ?? false)
+                      : undefined
+                  }
+                  onToggleToolbar={
+                    block.kind === "section"
+                      ? () =>
+                          setToolbarVisibleByBlock((prev) => ({
+                            ...prev,
+                            [block.key]: !(prev[block.key] ?? false),
+                          }))
+                      : undefined
+                  }>
+                  {block.kind === "section" && (
                     <div className={styles.sectionBlock}>
                       <TextInput
                         className={styles.sectionLabel}
                         placeholder="Section label (optional)"
-                        value={block.label ?? ''}
+                        value={block.label ?? ""}
                         onChange={(e) =>
                           updateDraft(entryId, (d) => ({
                             ...d,
                             blocks: d.blocks.map((b) =>
-                              b.key === block.key && b.kind === 'section'
+                              b.key === block.key && b.kind === "section"
                                 ? {
                                     ...b,
-                                    label: e.target.value === '' ? null : e.target.value,
+                                    label: e.target.value === "" ? null : e.target.value,
                                     labelDirty: true,
                                   }
                                 : b
@@ -276,12 +302,13 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
                         }
                       />
                       <SectionEditor
+                        toolbarVisible={toolbarVisibleByBlock[block.key] ?? false}
                         initialContent={block.contentJson}
                         onContentChange={(json) =>
                           updateDraft(entryId, (d) => ({
                             ...d,
                             blocks: d.blocks.map((b) =>
-                              b.key === block.key && b.kind === 'section'
+                              b.key === block.key && b.kind === "section"
                                 ? { ...b, contentJson: json, contentDirty: true }
                                 : b
                             ),
@@ -294,7 +321,7 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
                       />
                     </div>
                   )}
-                  {block.kind === 'image' && (
+                  {block.kind === "image" && (
                     <ImageBlockEdit
                       blockKey={block.key}
                       imageId={block.imageId}
@@ -304,7 +331,7 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
                         updateDraft(entryId, (d) => ({
                           ...d,
                           blocks: d.blocks.map((b) =>
-                            b.key === block.key && b.kind === 'image'
+                            b.key === block.key && b.kind === "image"
                               ? { ...b, label, labelDirty: true }
                               : b
                           ),
@@ -312,7 +339,7 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
                       }
                     />
                   )}
-                  {block.kind === 'sketch' && (
+                  {block.kind === "sketch" && (
                     <SketchBlockEdit
                       blockKey={block.key}
                       sketchId={block.sketchId}
@@ -322,7 +349,7 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
                         updateDraft(entryId, (d) => ({
                           ...d,
                           blocks: d.blocks.map((b) =>
-                            b.key === block.key && b.kind === 'sketch'
+                            b.key === block.key && b.kind === "sketch"
                               ? { ...b, label, labelDirty: true }
                               : b
                           ),
@@ -338,12 +365,11 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
                       className={styles.mergeButton}
                       onClick={() =>
                         mergeWithNext(
-                          block as BlockDraft & { kind: 'section' },
-                          nextBlock as BlockDraft & { kind: 'section' }
+                          block as BlockDraft & { kind: "section" },
+                          nextBlock as BlockDraft & { kind: "section" }
                         )
                       }
-                      data-testid={TID.blockMerge(block.key)}
-                    >
+                      data-testid={TID.blockMerge(block.key)}>
                       <ArrowsMerge size={11} />
                       Merge sections
                     </button>

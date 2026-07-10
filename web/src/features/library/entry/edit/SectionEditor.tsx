@@ -1,11 +1,11 @@
 // One Section block's scoped Tiptap editor. The editor is the live source of
 // content; onUpdate (debounced) mirrors JSON + dirty flag into the draft so
-// dirtiness checks, guards and Save all read draftStore. A floating toolbar
-// (BubbleMenu) appears on text selection only.
+// dirtiness checks, guards and Save all read draftStore. A persistent toolbar
+// provides formatting controls while editing.
 
-import { useEffect, useMemo, useRef } from 'react';
-import { BubbleMenu, EditorContent, useEditor } from '@tiptap/react';
-import type { Editor } from '@tiptap/core';
+import { useEffect, useMemo, useRef } from "react";
+import { EditorContent, useEditor } from "@tiptap/react";
+import type { Editor } from "@tiptap/core";
 import {
   Code,
   ListBullets,
@@ -16,10 +16,10 @@ import {
   TextHThree,
   TextHTwo,
   TextItalic,
-} from '@phosphor-icons/react';
-import type { PMNode } from '../../../../api/types';
-import { buildExtensions } from '../tiptap/extensions';
-import styles from './SectionEditor.module.css';
+} from "@phosphor-icons/react";
+import type { PMNode } from "../../../../api/types";
+import { buildExtensions } from "../tiptap/extensions";
+import styles from "./SectionEditor.module.css";
 
 const CONTENT_DEBOUNCE_MS = 300;
 
@@ -40,32 +40,33 @@ function ToolbarButton({
   return (
     <button
       type="button"
-      className={[styles.toolButton, active ? styles.toolActive : ''].filter(Boolean).join(' ')}
+      className={[styles.toolButton, active ? styles.toolActive : ""].filter(Boolean).join(" ")}
       aria-label={label}
       title={label}
       onMouseDown={(e) => e.preventDefault()}
-      onClick={onClick}
-    >
+      onClick={onClick}>
       {children}
     </button>
   );
 }
 
 export function SectionEditor({
+  toolbarVisible = false,
   initialContent,
   onContentChange,
   onEditorReady,
 }: {
+  toolbarVisible?: boolean;
   initialContent: PMNode | null;
   onContentChange: (json: PMNode) => void;
   onEditorReady?: (editor: Editor | null) => void;
 }) {
   const timer = useRef<number | null>(null);
-  const extensions = useMemo(() => buildExtensions('Write…'), []);
+  const extensions = useMemo(() => buildExtensions("Write…"), []);
 
   const editor = useEditor({
     extensions,
-    content: (initialContent as object | null) ?? '',
+    content: (initialContent as object | null) ?? "",
     onUpdate: ({ editor }) => {
       if (timer.current !== null) clearTimeout(timer.current);
       timer.current = window.setTimeout(() => {
@@ -95,82 +96,75 @@ export function SectionEditor({
 
   return (
     <div className={styles.wrapper}>
-      <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }} className={styles.toolbar}>
-        <ToolbarButton
-          editor={editor}
-          active={editor.isActive('bold')}
-          label="Bold"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-        >
-          <TextB size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          editor={editor}
-          active={editor.isActive('italic')}
-          label="Italic"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-        >
-          <TextItalic size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          editor={editor}
-          active={editor.isActive('code')}
-          label="Inline code"
-          onClick={() => editor.chain().focus().toggleCode().run()}
-        >
-          <Code size={14} />
-        </ToolbarButton>
-        <span className={styles.divider} />
-        <ToolbarButton
-          editor={editor}
-          active={editor.isActive('heading', { level: 2 })}
-          label="Heading 2"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        >
-          <TextHOne size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          editor={editor}
-          active={editor.isActive('heading', { level: 3 })}
-          label="Heading 3"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-        >
-          <TextHTwo size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          editor={editor}
-          active={editor.isActive('heading', { level: 4 })}
-          label="Heading 4"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
-        >
-          <TextHThree size={14} />
-        </ToolbarButton>
-        <span className={styles.divider} />
-        <ToolbarButton
-          editor={editor}
-          active={editor.isActive('bulletList')}
-          label="Bullet list"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-        >
-          <ListBullets size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          editor={editor}
-          active={editor.isActive('orderedList')}
-          label="Ordered list"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        >
-          <ListNumbers size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          editor={editor}
-          active={editor.isActive('blockquote')}
-          label="Blockquote"
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        >
-          <Quotes size={14} />
-        </ToolbarButton>
-      </BubbleMenu>
+      {toolbarVisible && (
+        <div className={styles.toolbar}>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("bold")}
+            label="Bold"
+            onClick={() => editor.chain().focus().toggleBold().run()}>
+            <TextB size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("italic")}
+            label="Italic"
+            onClick={() => editor.chain().focus().toggleItalic().run()}>
+            <TextItalic size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("code")}
+            label="Inline code"
+            onClick={() => editor.chain().focus().toggleCode().run()}>
+            <Code size={14} />
+          </ToolbarButton>
+          <span className={styles.divider} />
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("heading", { level: 2 })}
+            label="Heading 2"
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
+            <TextHOne size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("heading", { level: 3 })}
+            label="Heading 3"
+            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
+            <TextHTwo size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("heading", { level: 4 })}
+            label="Heading 4"
+            onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}>
+            <TextHThree size={14} />
+          </ToolbarButton>
+          <span className={styles.divider} />
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("bulletList")}
+            label="Bullet list"
+            onClick={() => editor.chain().focus().toggleBulletList().run()}>
+            <ListBullets size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("orderedList")}
+            label="Ordered list"
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+            <ListNumbers size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("blockquote")}
+            label="Blockquote"
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+            <Quotes size={14} />
+          </ToolbarButton>
+        </div>
+      )}
       <EditorContent editor={editor} className={styles.editor} />
     </div>
   );
