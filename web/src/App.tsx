@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Globe } from '@phosphor-icons/react';
+import { GlobeIcon } from '@phosphor-icons/react';
 import { keys } from './api/keys';
 import { listWorlds } from './api/endpoints';
 import { useWorkspaceStore } from './stores/workspaceStore';
@@ -66,7 +66,7 @@ export default function App() {
     return (
       <div className={styles.center}>
         <EmptyState
-          icon={<Globe size={40} />}
+          icon={<GlobeIcon size={40} />}
           message="Every saga starts somewhere. Create your first world to begin."
           action={
             <Button variant="primary" onClick={() => setCreateOpen(true)}>

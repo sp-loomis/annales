@@ -7,15 +7,15 @@ import { useEffect, useMemo, useRef } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
 import {
-  Code,
-  ListBullets,
-  ListNumbers,
-  Quotes,
-  TextB,
-  TextHOne,
-  TextHThree,
-  TextHTwo,
-  TextItalic,
+  CodeIcon,
+  ListBulletsIcon,
+  ListIcon,
+  QuotesIcon,
+  TextBIcon,
+  TextHOneIcon,
+  TextHThreeIcon,
+  TextHTwoIcon,
+  TextItalicIcon,
 } from "@phosphor-icons/react";
 import type { PMNode } from "../../../../api/types";
 import { buildExtensions } from "../tiptap/extensions";
@@ -103,21 +103,21 @@ export function SectionEditor({
             active={editor.isActive("bold")}
             label="Bold"
             onClick={() => editor.chain().focus().toggleBold().run()}>
-            <TextB size={14} />
+            <TextBIcon size={14} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("italic")}
             label="Italic"
             onClick={() => editor.chain().focus().toggleItalic().run()}>
-            <TextItalic size={14} />
+            <TextItalicIcon size={14} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("code")}
             label="Inline code"
             onClick={() => editor.chain().focus().toggleCode().run()}>
-            <Code size={14} />
+            <CodeIcon size={14} />
           </ToolbarButton>
           <span className={styles.divider} />
           <ToolbarButton
@@ -125,21 +125,21 @@ export function SectionEditor({
             active={editor.isActive("heading", { level: 2 })}
             label="Heading 2"
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
-            <TextHOne size={14} />
+            <TextHOneIcon size={14} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("heading", { level: 3 })}
             label="Heading 3"
             onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
-            <TextHTwo size={14} />
+            <TextHTwoIcon size={14} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("heading", { level: 4 })}
             label="Heading 4"
             onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}>
-            <TextHThree size={14} />
+            <TextHThreeIcon size={14} />
           </ToolbarButton>
           <span className={styles.divider} />
           <ToolbarButton
@@ -147,21 +147,21 @@ export function SectionEditor({
             active={editor.isActive("bulletList")}
             label="Bullet list"
             onClick={() => editor.chain().focus().toggleBulletList().run()}>
-            <ListBullets size={14} />
+            <ListBulletsIcon size={14} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("orderedList")}
             label="Ordered list"
             onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-            <ListNumbers size={14} />
+            <ListIcon size={14} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("blockquote")}
             label="Blockquote"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}>
-            <Quotes size={14} />
+            <QuotesIcon size={14} />
           </ToolbarButton>
         </div>
       )}
