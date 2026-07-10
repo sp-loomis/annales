@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { RefObject } from "react";
 
 type FullscreenElement = HTMLElement & {
   webkitRequestFullscreen?: () => Promise<void> | void;
@@ -33,41 +33,41 @@ export function useFullscreen(targetRef: RefObject<HTMLElement>) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const isSupported = useMemo(() => {
-    if (typeof document === 'undefined') {
+    if (typeof document === "undefined") {
       return false;
     }
     const doc = document as FullscreenDocument;
     return Boolean(
       doc.fullscreenEnabled ??
-        doc.webkitFullscreenEnabled ??
-        doc.mozFullScreenEnabled ??
-        doc.msFullscreenEnabled
+      doc.webkitFullscreenEnabled ??
+      doc.mozFullScreenEnabled ??
+      doc.msFullscreenEnabled
     );
   }, []);
 
   useEffect(() => {
-    if (typeof document === 'undefined') {
+    if (typeof document === "undefined") {
       return;
     }
     const doc = document as FullscreenDocument;
     const sync = () => setIsFullscreen(Boolean(getFullscreenElement(doc)));
 
     sync();
-    doc.addEventListener('fullscreenchange', sync);
-    doc.addEventListener('webkitfullscreenchange', sync as EventListener);
-    doc.addEventListener('mozfullscreenchange', sync as EventListener);
-    doc.addEventListener('MSFullscreenChange', sync as EventListener);
+    doc.addEventListener("fullscreenchange", sync);
+    doc.addEventListener("webkitfullscreenchange", sync as EventListener);
+    doc.addEventListener("mozfullscreenchange", sync as EventListener);
+    doc.addEventListener("MSFullscreenChange", sync as EventListener);
 
     return () => {
-      doc.removeEventListener('fullscreenchange', sync);
-      doc.removeEventListener('webkitfullscreenchange', sync as EventListener);
-      doc.removeEventListener('mozfullscreenchange', sync as EventListener);
-      doc.removeEventListener('MSFullscreenChange', sync as EventListener);
+      doc.removeEventListener("fullscreenchange", sync);
+      doc.removeEventListener("webkitfullscreenchange", sync as EventListener);
+      doc.removeEventListener("mozfullscreenchange", sync as EventListener);
+      doc.removeEventListener("MSFullscreenChange", sync as EventListener);
     };
   }, []);
 
   const enterFullscreen = useCallback(async () => {
-    if (!isSupported || typeof document === 'undefined') {
+    if (!isSupported || typeof document === "undefined") {
       return false;
     }
 
@@ -97,7 +97,7 @@ export function useFullscreen(targetRef: RefObject<HTMLElement>) {
   }, [isSupported, targetRef]);
 
   const exitFullscreen = useCallback(async () => {
-    if (!isSupported || typeof document === 'undefined') {
+    if (!isSupported || typeof document === "undefined") {
       return false;
     }
 

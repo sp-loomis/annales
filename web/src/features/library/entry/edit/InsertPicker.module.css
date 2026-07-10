@@ -27,7 +27,7 @@
     background 120ms var(--ease);
 }
 
-.plus[data-state='open'] {
+.plus[data-state="open"] {
   opacity: 1;
 }
 

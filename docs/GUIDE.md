@@ -116,11 +116,11 @@ live in `web/README.md`.
 
 Dev-mode gotchas:
 
-| Symptom | Cause / fix |
-|---|---|
-| Blank page + `504 Outdated Optimize Dep` in console | Vite's dep cache went stale after `node_modules` changed. Restart `npm run dev:web` |
-| "Invalid hook call" / two Reacts | React is pinned to 18 (Excalidraw's peer range); a stray `web/node_modules/react` from an old install can shadow it. `rm -rf node_modules web/node_modules package-lock.json && npm install --cache /tmp/npm-cache-sheaf` |
-| Images stuck "pending" | Presigned PUT goes browser→LocalStack directly; confirm :4566 is up and the bucket exists (`curl -s localhost:4566/_localstack/health`) |
+| Symptom                                             | Cause / fix                                                                                                                                                                                                               |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Blank page + `504 Outdated Optimize Dep` in console | Vite's dep cache went stale after `node_modules` changed. Restart `npm run dev:web`                                                                                                                                       |
+| "Invalid hook call" / two Reacts                    | React is pinned to 18 (Excalidraw's peer range); a stray `web/node_modules/react` from an old install can shadow it. `rm -rf node_modules web/node_modules package-lock.json && npm install --cache /tmp/npm-cache-sheaf` |
+| Images stuck "pending"                              | Presigned PUT goes browser→LocalStack directly; confirm :4566 is up and the bucket exists (`curl -s localhost:4566/_localstack/health`)                                                                                   |
 
 ## Throwing requests at it
 
@@ -263,13 +263,13 @@ mid-test-debugging.
 
 ## Troubleshooting
 
-| Symptom | Cause / fix |
-|---|---|
-| `Cannot connect to Podman` | `podman machine start` (needed once per boot) |
-| `npm install` fails EACCES/EEXIST in `~/.npm/_cacache` | Root-owned entries from an old `sudo npm`. Either `sudo chown -R 501:20 ~/.npm` once, or keep using `--cache /tmp/npm-cache-sheaf` |
-| Presigned PUT returns 400 `x-amz-checksum-crc32 header is invalid` | AWS SDK ≥3.729 flexible-checksum default. Already disabled in `src/lib/storage.ts` (`requestChecksumCalculation: 'WHEN_REQUIRED'`) — if you build another S3 client, do the same |
-| `prisma migrate dev` hangs after applying | Environment quirk. Use `--create-only` + `prisma migrate deploy` instead |
-| Port 5433/4566 already bound | Another compose project; `podman ps` and stop it, or change ports in `docker-compose.yml` + `.env` |
-| `docker: command not found` in npm scripts | `docker` is only a zsh alias here — non-interactive shells don't see it. Local scripts/docs use `podman` directly for this reason |
-| `/healthz` returns 503 | Body says which probe failed (`db` / `storage`). `db: false` usually means `.env` wasn't loaded (run via `npm run dev`, not bare `tsx`) or containers are down; `storage: false` means LocalStack is down or the bucket is missing |
-| Artifact stuck `failed` | Upload window expired before upload. `POST /<kind>/:id/upload-url` for a fresh window, PUT, finalize |
+| Symptom                                                            | Cause / fix                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Cannot connect to Podman`                                         | `podman machine start` (needed once per boot)                                                                                                                                                                                      |
+| `npm install` fails EACCES/EEXIST in `~/.npm/_cacache`             | Root-owned entries from an old `sudo npm`. Either `sudo chown -R 501:20 ~/.npm` once, or keep using `--cache /tmp/npm-cache-sheaf`                                                                                                 |
+| Presigned PUT returns 400 `x-amz-checksum-crc32 header is invalid` | AWS SDK ≥3.729 flexible-checksum default. Already disabled in `src/lib/storage.ts` (`requestChecksumCalculation: 'WHEN_REQUIRED'`) — if you build another S3 client, do the same                                                   |
+| `prisma migrate dev` hangs after applying                          | Environment quirk. Use `--create-only` + `prisma migrate deploy` instead                                                                                                                                                           |
+| Port 5433/4566 already bound                                       | Another compose project; `podman ps` and stop it, or change ports in `docker-compose.yml` + `.env`                                                                                                                                 |
+| `docker: command not found` in npm scripts                         | `docker` is only a zsh alias here — non-interactive shells don't see it. Local scripts/docs use `podman` directly for this reason                                                                                                  |
+| `/healthz` returns 503                                             | Body says which probe failed (`db` / `storage`). `db: false` usually means `.env` wasn't loaded (run via `npm run dev`, not bare `tsx`) or containers are down; `storage: false` means LocalStack is down or the bucket is missing |
+| Artifact stuck `failed`                                            | Upload window expired before upload. `POST /<kind>/:id/upload-url` for a fresh window, PUT, finalize                                                                                                                               |

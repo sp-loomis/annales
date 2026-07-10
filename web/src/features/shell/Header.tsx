@@ -1,4 +1,10 @@
-import { ArrowsInSimple, ArrowsOutSimple, CornersIn, CornersOut, GearSix } from "@phosphor-icons/react";
+import {
+  ArrowsInSimple,
+  ArrowsOutSimple,
+  CornersIn,
+  CornersOut,
+  GearSix,
+} from "@phosphor-icons/react";
 import { IconButton } from "../../components/IconButton";
 import { WorldSwitcher } from "./WorldSwitcher";
 import { TID } from "../../testids";
@@ -46,8 +52,7 @@ export function Header({
           onClick={onToggleFocus}
           active={isFocusMode}
           aria-pressed={isFocusMode}
-          data-testid={TID.focusButton}
-        >
+          data-testid={TID.focusButton}>
           {isFocusMode ? <CornersIn size={18} /> : <CornersOut size={18} />}
         </IconButton>
         <IconButton
@@ -56,8 +61,7 @@ export function Header({
           active={isFullscreen}
           aria-pressed={isFullscreen}
           disabled={!isFullscreenSupported}
-          data-testid={TID.fullscreenButton}
-        >
+          data-testid={TID.fullscreenButton}>
           {isFullscreen ? <ArrowsInSimple size={18} /> : <ArrowsOutSimple size={18} />}
         </IconButton>
       </div>

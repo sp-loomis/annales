@@ -4,17 +4,17 @@
 // localStorage via autoSaveId — device-local by design, unlike tab state
 // which lives in WorkspaceState.
 
-import { useRef, useState } from 'react';
-import type { ReactNode } from 'react';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import type { ImperativePanelHandle } from 'react-resizable-panels';
-import { CaretRight } from '@phosphor-icons/react';
-import { Header } from './Header';
-import { ModeRail } from './ModeRail';
-import { TID } from '../../testids';
-import { useFullscreen } from '../../lib/useFullscreen';
-import { ShellChromeContext } from './ShellChromeContext';
-import styles from './AppLayout.module.css';
+import { useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import type { ImperativePanelHandle } from "react-resizable-panels";
+import { CaretRight } from "@phosphor-icons/react";
+import { Header } from "./Header";
+import { ModeRail } from "./ModeRail";
+import { TID } from "../../testids";
+import { useFullscreen } from "../../lib/useFullscreen";
+import { ShellChromeContext } from "./ShellChromeContext";
+import styles from "./AppLayout.module.css";
 
 export function AppLayout({
   sidebar,
@@ -30,8 +30,12 @@ export function AppLayout({
   const sidebarWasExpandedBeforeFocusRef = useRef(false);
   const [collapsed, setCollapsed] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
-  const { isFullscreen, isSupported: isFullscreenSupported, enterFullscreen, exitFullscreen } =
-    useFullscreen(shellRef);
+  const {
+    isFullscreen,
+    isSupported: isFullscreenSupported,
+    enterFullscreen,
+    exitFullscreen,
+  } = useFullscreen(shellRef);
 
   const handleToggleFocus = () => {
     setIsFocusMode((prev) => {
@@ -70,12 +74,10 @@ export function AppLayout({
         isFullscreenSupported,
         toggleFocus: handleToggleFocus,
         toggleFullscreen: handleToggleFullscreen,
-      }}
-    >
+      }}>
       <div
         ref={shellRef}
-        className={[styles.shell, isFocusMode ? styles.focusMode : ''].filter(Boolean).join(' ')}
-      >
+        className={[styles.shell, isFocusMode ? styles.focusMode : ""].filter(Boolean).join(" ")}>
         {!isFocusMode && (
           <Header
             onOpenSettings={onOpenSettings}
@@ -100,8 +102,7 @@ export function AppLayout({
               defaultSize={26}
               onCollapse={() => setCollapsed(true)}
               onExpand={() => setCollapsed(false)}
-              className={styles.sidebarPanel}
-            >
+              className={styles.sidebarPanel}>
               {sidebar}
             </Panel>
             <PanelResizeHandle
@@ -115,8 +116,7 @@ export function AppLayout({
                   className={styles.expandButton}
                   onClick={() => sidebarRef.current?.expand()}
                   aria-label="Show sidebar"
-                  data-testid={TID.sidebarExpand}
-                >
+                  data-testid={TID.sidebarExpand}>
                   <CaretRight size={14} />
                 </button>
               )}

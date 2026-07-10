@@ -2,22 +2,29 @@
 // until hover. Overflow (tabs exceed the row) reveals a CaretDown menu listing
 // every open tab. Closing a dirty tab asks for confirmation first.
 
-import { useEffect, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useQuery } from '@tanstack/react-query';
-import { DropdownMenu } from 'radix-ui';
-import { ArrowsInSimple, ArrowsOutSimple, CaretDown, Circle, CornersIn, X } from '@phosphor-icons/react';
-import { keys } from '../../../api/keys';
-import { getEntry, listEntryTypes } from '../../../api/endpoints';
-import { useWorkspaceStore, selectWorkspace } from '../../../stores/workspaceStore';
-import { useDraftStore, useIsDirty } from '../../../stores/draftStore';
-import { isDraftDirty } from '../entry/edit/draft';
-import { ConfirmDialog } from '../../../components/ConfirmDialog';
-import { IconButton } from '../../../components/IconButton';
-import { WorldIcon } from '../../../components/icons/WorldIcon';
-import { TID } from '../../../testids';
-import { useShellChromeControls } from '../../shell/ShellChromeContext';
-import styles from './TabBar.module.css';
+import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { DropdownMenu } from "radix-ui";
+import {
+  ArrowsInSimple,
+  ArrowsOutSimple,
+  CaretDown,
+  Circle,
+  CornersIn,
+  X,
+} from "@phosphor-icons/react";
+import { keys } from "../../../api/keys";
+import { getEntry, listEntryTypes } from "../../../api/endpoints";
+import { useWorkspaceStore, selectWorkspace } from "../../../stores/workspaceStore";
+import { useDraftStore, useIsDirty } from "../../../stores/draftStore";
+import { isDraftDirty } from "../entry/edit/draft";
+import { ConfirmDialog } from "../../../components/ConfirmDialog";
+import { IconButton } from "../../../components/IconButton";
+import { WorldIcon } from "../../../components/icons/WorldIcon";
+import { TID } from "../../../testids";
+import { useShellChromeControls } from "../../shell/ShellChromeContext";
+import styles from "./TabBar.module.css";
 
 function Tab({
   entryId,
@@ -32,9 +39,12 @@ function Tab({
 }) {
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const dirty = useIsDirty(entryId);
-  const { data: entry } = useQuery({ queryKey: keys.entry(entryId), queryFn: () => getEntry(entryId) });
+  const { data: entry } = useQuery({
+    queryKey: keys.entry(entryId),
+    queryFn: () => getEntry(entryId),
+  });
   const { data: types } = useQuery({
-    queryKey: worldId ? keys.entryTypes(worldId) : ['entry-types', 'none'],
+    queryKey: worldId ? keys.entryTypes(worldId) : ["entry-types", "none"],
     queryFn: () => listEntryTypes(worldId!),
     enabled: worldId !== null,
   });
@@ -42,12 +52,11 @@ function Tab({
 
   return (
     <div
-      className={[styles.tab, active ? styles.active : ''].filter(Boolean).join(' ')}
-      data-testid={TID.tab(entryId)}
-    >
+      className={[styles.tab, active ? styles.active : ""].filter(Boolean).join(" ")}
+      data-testid={TID.tab(entryId)}>
       <button type="button" className={styles.tabLabel} onClick={onSelect}>
         <WorldIcon iconName={type?.iconName} iconWeight={type?.iconWeight} size={13} />
-        <span className={styles.tabTitle}>{entry?.title ?? '…'}</span>
+        <span className={styles.tabTitle}>{entry?.title ?? "…"}</span>
       </button>
       <button
         type="button"
@@ -57,8 +66,7 @@ function Tab({
           onClose();
         }}
         aria-label="Close tab"
-        data-testid={TID.tabClose(entryId)}
-      >
+        data-testid={TID.tabClose(entryId)}>
         {dirty ? <Circle size={8} weight="fill" className={styles.dirtyDot} /> : null}
         <X size={11} className={dirty ? styles.closeIconDirty : undefined} />
       </button>
@@ -101,14 +109,14 @@ export function TabBar() {
   };
 
   const pendingTitle = pendingClose
-    ? (queryClient.getQueryData<{ title: string }>(keys.entry(pendingClose))?.title ?? 'this entry')
-    : '';
+    ? (queryClient.getQueryData<{ title: string }>(keys.entry(pendingClose))?.title ?? "this entry")
+    : "";
 
   const fullscreenLabel = shellControls?.isFullscreen
-    ? 'Exit fullscreen'
+    ? "Exit fullscreen"
     : shellControls?.isFullscreenSupported
-      ? 'Enter fullscreen'
-      : 'Fullscreen unavailable in this browser';
+      ? "Enter fullscreen"
+      : "Fullscreen unavailable in this browser";
 
   return (
     <div className={styles.bar}>
@@ -130,8 +138,7 @@ export function TabBar() {
             onClick={shellControls.toggleFocus}
             active
             aria-pressed
-            data-testid={TID.focusButton}
-          >
+            data-testid={TID.focusButton}>
             <CornersIn size={16} />
           </IconButton>
           <IconButton
@@ -140,9 +147,12 @@ export function TabBar() {
             active={shellControls.isFullscreen}
             aria-pressed={shellControls.isFullscreen}
             disabled={!shellControls.isFullscreenSupported}
-            data-testid={TID.fullscreenButton}
-          >
-            {shellControls.isFullscreen ? <ArrowsInSimple size={16} /> : <ArrowsOutSimple size={16} />}
+            data-testid={TID.fullscreenButton}>
+            {shellControls.isFullscreen ? (
+              <ArrowsInSimple size={16} />
+            ) : (
+              <ArrowsOutSimple size={16} />
+            )}
           </IconButton>
         </div>
       )}
@@ -153,8 +163,7 @@ export function TabBar() {
               type="button"
               className={styles.overflowTrigger}
               aria-label="All open tabs"
-              data-testid={TID.tabOverflowTrigger}
-            >
+              data-testid={TID.tabOverflowTrigger}>
               <CaretDown size={13} />
             </button>
           </DropdownMenu.Trigger>
@@ -192,14 +201,16 @@ export function TabBar() {
 }
 
 function OverflowItem({ entryId, onSelect }: { entryId: string; onSelect: () => void }) {
-  const { data: entry } = useQuery({ queryKey: keys.entry(entryId), queryFn: () => getEntry(entryId) });
+  const { data: entry } = useQuery({
+    queryKey: keys.entry(entryId),
+    queryFn: () => getEntry(entryId),
+  });
   return (
     <DropdownMenu.Item
       className={styles.overflowItem}
       onSelect={onSelect}
-      data-testid={TID.tabOverflowItem(entryId)}
-    >
-      {entry?.title ?? '…'}
+      data-testid={TID.tabOverflowItem(entryId)}>
+      {entry?.title ?? "…"}
     </DropdownMenu.Item>
   );
 }
