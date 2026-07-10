@@ -12,6 +12,7 @@ import { RelationTypesPanel } from "./RelationTypesPanel";
 import { ThemePanel } from "./ThemePanel";
 import { TID } from "../../testids";
 import { getOverlayContainer } from "../../lib/overlay";
+import { useScaledPx } from "../../theme/ui-scale";
 import dialogStyles from "../../components/Dialog.module.css";
 import styles from "./SettingsDialog.module.css";
 
@@ -30,6 +31,7 @@ export function SettingsDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [section, setSection] = useState<(typeof SECTIONS)[number]["key"]>("general");
+  const closeIconSize = useScaledPx(16);
   const Active = SECTIONS.find((s) => s.key === section)?.Panel ?? GeneralPanel;
   const portalContainer = getOverlayContainer();
 
@@ -58,7 +60,7 @@ export function SettingsDialog({
               </h2>
               <Dialog.Close asChild>
                 <IconButton label="Close settings" data-testid={TID.settingsClose}>
-                  <X size={16} />
+                  <X size={closeIconSize} />
                 </IconButton>
               </Dialog.Close>
             </div>

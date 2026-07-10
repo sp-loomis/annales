@@ -2,8 +2,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: calc(30px * var(--ui-scale-factor));
+  height: calc(30px * var(--ui-scale-factor));
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
   background: var(--surface-0);
@@ -19,9 +19,9 @@
 .popover {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: 300px;
-  padding: 10px;
+  gap: calc(8px * var(--ui-scale-factor));
+  width: calc(300px * var(--ui-scale-factor));
+  padding: calc(10px * var(--ui-scale-factor));
   background: var(--surface-0);
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
@@ -32,27 +32,27 @@
 .loading {
   display: flex;
   justify-content: center;
-  padding: 20px;
+  padding: calc(20px * var(--ui-scale-factor));
 }
 
 .scroll {
-  max-height: 240px;
+  max-height: calc(240px * var(--ui-scale-factor));
   overflow-y: auto;
 }
 
 .sectionLabel {
-  font-size: 11px;
+  font-size: var(--ui-font-size-small);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-2);
-  margin-bottom: 4px;
+  margin-bottom: calc(4px * var(--ui-scale-factor));
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 2px;
+  gap: calc(2px * var(--ui-scale-factor));
 }
 
 .cell {
@@ -77,16 +77,16 @@
 }
 
 .noResults {
-  margin: 8px 0;
-  font-size: 12px;
+  margin: calc(8px * var(--ui-scale-factor)) 0;
+  font-size: var(--ui-font-size-small);
   color: var(--text-2);
 }
 
 .weightRow {
   display: flex;
-  gap: 2px;
+  gap: calc(2px * var(--ui-scale-factor));
   border-top: 1px solid var(--border);
-  padding-top: 8px;
+  padding-top: calc(8px * var(--ui-scale-factor));
 }
 
 .weight {
@@ -94,13 +94,13 @@
   align-items: center;
   justify-content: center;
   flex: 1;
-  height: 26px;
+  height: calc(26px * var(--ui-scale-factor));
   border: 1px solid transparent;
   border-radius: var(--radius-s);
   background: none;
   cursor: pointer;
   color: var(--text-2);
-  font-size: 10px;
+  font-size: calc(10px * var(--ui-scale-factor));
 }
 
 .weight:hover {

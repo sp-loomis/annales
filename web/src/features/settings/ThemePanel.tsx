@@ -89,7 +89,7 @@ export function ThemePanel() {
                 className={styles.swatch}
                 style={{ background: theme.darkMode ? p.surfaceDark : p.surfaceLight }}
               />
-              {p.label}
+              <span className={styles.paletteLabel}>{p.label}</span>
             </button>
           ))}
         </div>

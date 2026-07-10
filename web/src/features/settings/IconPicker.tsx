@@ -10,6 +10,7 @@ import { SUGGESTED_ICONS } from "../../components/icons/suggested";
 import { TextInput } from "../../components/TextInput";
 import { Spinner } from "../../components/Spinner";
 import { TID } from "../../testids";
+import { useScaledPx } from "../../theme/ui-scale";
 import styles from "./IconPicker.module.css";
 
 const WEIGHTS = ["thin", "light", "regular", "bold", "fill", "duotone"] as const;
@@ -24,6 +25,9 @@ export function IconPicker({
   iconWeight: string | null;
   onChange: (patch: { iconName?: string | null; iconWeight?: string | null }) => void;
 }) {
+  const triggerIconSize = useScaledPx(16);
+  const weightIconSize = useScaledPx(14);
+  const cellIconSize = useScaledPx(17);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const map = useIconMap();
@@ -42,7 +46,7 @@ export function IconPicker({
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
         <button type="button" className={styles.trigger} aria-label="Choose icon">
-          <WorldIcon iconName={iconName} iconWeight={iconWeight} size={16} />
+          <WorldIcon iconName={iconName} iconWeight={iconWeight} size={triggerIconSize} />
         </button>
       </Popover.Trigger>
       <Popover.Content className={styles.popover} sideOffset={6} align="start">
@@ -66,6 +70,7 @@ export function IconPicker({
                   names={suggested}
                   current={iconName}
                   weight={iconWeight}
+                  iconSize={cellIconSize}
                   onPick={(name) => onChange({ iconName: name })}
                 />
               </>
@@ -75,6 +80,7 @@ export function IconPicker({
                 names={names}
                 current={iconName}
                 weight={iconWeight}
+                iconSize={cellIconSize}
                 onPick={(name) => onChange({ iconName: name })}
               />
             )}
@@ -95,7 +101,7 @@ export function IconPicker({
               className={[styles.weight, iconWeight === w ? styles.weightActive : ""].join(" ")}
               onClick={() => onChange({ iconWeight: w })}
               title={w}>
-              <WorldIcon iconName={iconName ?? "Circle"} iconWeight={w} size={14} />
+              <WorldIcon iconName={iconName ?? "Circle"} iconWeight={w} size={weightIconSize} />
             </button>
           ))}
         </div>
@@ -108,11 +114,13 @@ function IconGrid({
   names,
   current,
   weight,
+  iconSize,
   onPick,
 }: {
   names: string[];
   current: string | null;
   weight: string | null;
+  iconSize: number;
   onPick: (name: string) => void;
 }) {
   if (names.length === 0) {
@@ -128,7 +136,7 @@ function IconGrid({
           onClick={() => onPick(name)}
           title={name}
           data-testid={TID.iconPickerItem(name)}>
-          <WorldIcon iconName={name} iconWeight={weight} size={17} />
+          <WorldIcon iconName={name} iconWeight={weight} size={iconSize} />
         </button>
       ))}
     </div>

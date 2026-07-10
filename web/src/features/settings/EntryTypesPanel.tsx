@@ -2,33 +2,35 @@
 // from the name for new types (editable before create). Delete surfaces the
 // API's 409 IN_USE guard.
 
-import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Trash } from '@phosphor-icons/react';
-import { keys } from '../../api/keys';
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trash } from "@phosphor-icons/react";
+import { keys } from "../../api/keys";
 import {
   createEntryType,
   deleteEntryType,
   listEntryTypes,
   patchEntryType,
-} from '../../api/endpoints';
-import { ApiError } from '../../api/client';
-import type { EntryType } from '../../api/types';
-import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Button } from '../../components/Button';
-import { TextInput } from '../../components/TextInput';
-import { IconButton } from '../../components/IconButton';
-import { IconPicker } from './IconPicker';
-import { TID } from '../../testids';
-import styles from './SettingsPanels.module.css';
+} from "../../api/endpoints";
+import { ApiError } from "../../api/client";
+import type { EntryType } from "../../api/types";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
+import { Button } from "../../components/Button";
+import { TextInput } from "../../components/TextInput";
+import { IconButton } from "../../components/IconButton";
+import { IconPicker } from "./IconPicker";
+import { TID } from "../../testids";
+import { useScaledPx } from "../../theme/ui-scale";
+import styles from "./SettingsPanels.module.css";
 
 const slugify = (s: string) =>
   s
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 
 function TypeRow({ type, onError }: { type: EntryType; onError: (msg: string | null) => void }) {
+  const trashIconSize = useScaledPx(14);
   const queryClient = useQueryClient();
   const [name, setName] = useState(type.name);
   const [slug, setSlug] = useState(type.slug);
@@ -41,7 +43,7 @@ function TypeRow({ type, onError }: { type: EntryType; onError: (msg: string | n
       onError(null);
       invalidate();
     },
-    onError: (e) => onError(e instanceof ApiError ? e.message : 'Update failed'),
+    onError: (e) => onError(e instanceof ApiError ? e.message : "Update failed"),
   });
 
   const remove = useMutation({
@@ -52,9 +54,9 @@ function TypeRow({ type, onError }: { type: EntryType; onError: (msg: string | n
     },
     onError: (e) =>
       onError(
-        e instanceof ApiError && e.code === 'IN_USE'
+        e instanceof ApiError && e.code === "IN_USE"
           ? `"${type.name}" is in use by existing entries and cannot be deleted.`
-          : 'Delete failed'
+          : "Delete failed"
       ),
   });
 
@@ -83,7 +85,7 @@ function TypeRow({ type, onError }: { type: EntryType; onError: (msg: string | n
         }}
       />
       <IconButton label="Delete entry type" onClick={() => remove.mutate()}>
-        <Trash size={14} />
+        <Trash size={trashIconSize} />
       </IconButton>
     </div>
   );
@@ -93,23 +95,22 @@ export function EntryTypesPanel() {
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const [newName, setNewName] = useState('');
+  const [newName, setNewName] = useState("");
 
   const { data: types } = useQuery({
-    queryKey: worldId ? keys.entryTypes(worldId) : ['entry-types', 'none'],
+    queryKey: worldId ? keys.entryTypes(worldId) : ["entry-types", "none"],
     queryFn: () => listEntryTypes(worldId!),
     enabled: worldId !== null,
   });
 
   const create = useMutation({
-    mutationFn: () =>
-      createEntryType(worldId!, { name: newName.trim(), slug: slugify(newName) }),
+    mutationFn: () => createEntryType(worldId!, { name: newName.trim(), slug: slugify(newName) }),
     onSuccess: () => {
-      setNewName('');
+      setNewName("");
       setError(null);
       queryClient.invalidateQueries({ queryKey: keys.entryTypes(worldId!) });
     },
-    onError: (e) => setError(e instanceof ApiError ? e.message : 'Create failed'),
+    onError: (e) => setError(e instanceof ApiError ? e.message : "Create failed"),
   });
 
   if (!worldId) return null;
@@ -126,8 +127,7 @@ export function EntryTypesPanel() {
         onSubmit={(e) => {
           e.preventDefault();
           if (newName.trim()) create.mutate();
-        }}
-      >
+        }}>
         <TextInput
           placeholder="New type name…"
           value={newName}

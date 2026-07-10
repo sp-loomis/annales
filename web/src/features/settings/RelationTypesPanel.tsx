@@ -1,46 +1,41 @@
 // Per-world relation type registry: icon + name ⇄ inverseName rows.
 
-import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Trash } from '@phosphor-icons/react';
-import { keys } from '../../api/keys';
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trash } from "@phosphor-icons/react";
+import { keys } from "../../api/keys";
 import {
   createRelationType,
   deleteRelationType,
   listRelationTypes,
   patchRelationType,
-} from '../../api/endpoints';
-import { ApiError } from '../../api/client';
-import type { RelationType } from '../../api/types';
-import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Button } from '../../components/Button';
-import { TextInput } from '../../components/TextInput';
-import { IconButton } from '../../components/IconButton';
-import { IconPicker } from './IconPicker';
-import { TID } from '../../testids';
-import styles from './SettingsPanels.module.css';
+} from "../../api/endpoints";
+import { ApiError } from "../../api/client";
+import type { RelationType } from "../../api/types";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
+import { Button } from "../../components/Button";
+import { TextInput } from "../../components/TextInput";
+import { IconButton } from "../../components/IconButton";
+import { IconPicker } from "./IconPicker";
+import { TID } from "../../testids";
+import { useScaledPx } from "../../theme/ui-scale";
+import styles from "./SettingsPanels.module.css";
 
-function TypeRow({
-  type,
-  onError,
-}: {
-  type: RelationType;
-  onError: (msg: string | null) => void;
-}) {
+function TypeRow({ type, onError }: { type: RelationType; onError: (msg: string | null) => void }) {
+  const trashIconSize = useScaledPx(14);
   const queryClient = useQueryClient();
   const [name, setName] = useState(type.name);
-  const [inverse, setInverse] = useState(type.inverseName ?? '');
+  const [inverse, setInverse] = useState(type.inverseName ?? "");
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: keys.relationTypes(type.worldId) });
 
   const patch = useMutation({
-    mutationFn: (body: Parameters<typeof patchRelationType>[1]) =>
-      patchRelationType(type.id, body),
+    mutationFn: (body: Parameters<typeof patchRelationType>[1]) => patchRelationType(type.id, body),
     onSuccess: () => {
       onError(null);
       invalidate();
     },
-    onError: (e) => onError(e instanceof ApiError ? e.message : 'Update failed'),
+    onError: (e) => onError(e instanceof ApiError ? e.message : "Update failed"),
   });
 
   const remove = useMutation({
@@ -51,9 +46,9 @@ function TypeRow({
     },
     onError: (e) =>
       onError(
-        e instanceof ApiError && e.code === 'IN_USE'
+        e instanceof ApiError && e.code === "IN_USE"
           ? `"${type.name}" is in use by existing relations and cannot be deleted.`
-          : 'Delete failed'
+          : "Delete failed"
       ),
   });
 
@@ -77,12 +72,12 @@ function TypeRow({
         placeholder="inverse (optional)"
         onChange={(e) => setInverse(e.target.value)}
         onBlur={() => {
-          const v = inverse.trim() === '' ? null : inverse.trim();
+          const v = inverse.trim() === "" ? null : inverse.trim();
           if (v !== type.inverseName) patch.mutate({ inverseName: v });
         }}
       />
       <IconButton label="Delete relation type" onClick={() => remove.mutate()}>
-        <Trash size={14} />
+        <Trash size={trashIconSize} />
       </IconButton>
     </div>
   );
@@ -92,11 +87,11 @@ export function RelationTypesPanel() {
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const [newName, setNewName] = useState('');
-  const [newInverse, setNewInverse] = useState('');
+  const [newName, setNewName] = useState("");
+  const [newInverse, setNewInverse] = useState("");
 
   const { data: types } = useQuery({
-    queryKey: worldId ? keys.relationTypes(worldId) : ['relation-types', 'none'],
+    queryKey: worldId ? keys.relationTypes(worldId) : ["relation-types", "none"],
     queryFn: () => listRelationTypes(worldId!),
     enabled: worldId !== null,
   });
@@ -105,15 +100,15 @@ export function RelationTypesPanel() {
     mutationFn: () =>
       createRelationType(worldId!, {
         name: newName.trim(),
-        inverseName: newInverse.trim() === '' ? null : newInverse.trim(),
+        inverseName: newInverse.trim() === "" ? null : newInverse.trim(),
       }),
     onSuccess: () => {
-      setNewName('');
-      setNewInverse('');
+      setNewName("");
+      setNewInverse("");
       setError(null);
       queryClient.invalidateQueries({ queryKey: keys.relationTypes(worldId!) });
     },
-    onError: (e) => setError(e instanceof ApiError ? e.message : 'Create failed'),
+    onError: (e) => setError(e instanceof ApiError ? e.message : "Create failed"),
   });
 
   if (!worldId) return null;
@@ -134,8 +129,7 @@ export function RelationTypesPanel() {
         onSubmit={(e) => {
           e.preventDefault();
           if (newName.trim()) create.mutate();
-        }}
-      >
+        }}>
         <TextInput
           placeholder="New relation name…"
           value={newName}
