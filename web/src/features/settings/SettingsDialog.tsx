@@ -1,4 +1,4 @@
-// World Settings: sectioned modal (Worlds / Entry Types / Relation Types /
+// World Settings: sectioned modal (General / Entry Types / Relation Types /
 // World Theme). Timelines & Calendars and Globes & CRS sections join this nav
 // when their add-ons are built.
 
@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Dialog } from "radix-ui";
 import { X } from "@phosphor-icons/react";
 import { IconButton } from "../../components/IconButton";
-import { WorldsPanel } from "./WorldsPanel";
+import { GeneralPanel } from "./GeneralPanel";
 import { EntryTypesPanel } from "./EntryTypesPanel";
 import { RelationTypesPanel } from "./RelationTypesPanel";
 import { ThemePanel } from "./ThemePanel";
@@ -16,7 +16,7 @@ import dialogStyles from "../../components/Dialog.module.css";
 import styles from "./SettingsDialog.module.css";
 
 const SECTIONS = [
-  { key: "worlds", label: "Worlds", Panel: WorldsPanel },
+  { key: "general", label: "General", Panel: GeneralPanel },
   { key: "entry-types", label: "Entry Types", Panel: EntryTypesPanel },
   { key: "relation-types", label: "Relation Types", Panel: RelationTypesPanel },
   { key: "theme", label: "World Theme", Panel: ThemePanel },
@@ -29,8 +29,8 @@ export function SettingsDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [section, setSection] = useState<(typeof SECTIONS)[number]["key"]>("worlds");
-  const Active = SECTIONS.find((s) => s.key === section)?.Panel ?? WorldsPanel;
+  const [section, setSection] = useState<(typeof SECTIONS)[number]["key"]>("general");
+  const Active = SECTIONS.find((s) => s.key === section)?.Panel ?? GeneralPanel;
   const portalContainer = getOverlayContainer();
 
   return (

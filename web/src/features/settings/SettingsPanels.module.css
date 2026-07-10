@@ -19,6 +19,18 @@
   width: 100%;
 }
 
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(420px, 100%);
+}
+
+.field label {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
 .slugInput {
   max-width: 140px;
   font-family: ui-monospace, monospace;
