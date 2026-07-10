@@ -21,6 +21,7 @@ import { RelationBlock } from "../read/RelationBlock";
 import { AddRelationPopover } from "../../relations/AddRelationPopover";
 import { BlockCompositor } from "./BlockCompositor";
 import { useSaveEntry, cancelDraft } from "./useSaveEntry";
+import { getUntitledLabel, isTempEntryId } from "../tempEntry";
 import { WorldIcon } from "../../../../components/icons/WorldIcon";
 import { getOverlayContainer } from "../../../../lib/overlay";
 import { TID } from "../../../../testids";
@@ -51,18 +52,27 @@ function TypeRow({
   );
 }
 
-export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () => void }) {
+export function EntryEdit({
+  entryId,
+  entry,
+  onExit,
+}: {
+  entryId: string;
+  entry?: EntryDetail;
+  onExit: () => void;
+}) {
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const closeTab = useWorkspaceStore((s) => s.closeTab);
-  const draft = useDraftStore((s) => s.drafts[entry.id]);
+  const draft = useDraftStore((s) => s.drafts[entryId]);
   const updateDraft = useDraftStore((s) => s.updateDraft);
+  const isTempEntry = isTempEntryId(entryId);
   const queryClient = useQueryClient();
 
   const [tagInput, setTagInput] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const portalContainer = getOverlayContainer();
-  const { save, saving, errors } = useSaveEntry(entry.id, worldId, onExit);
+  const { save, saving, errors } = useSaveEntry(entryId, worldId, onExit);
 
   const { data: types } = useQuery({
     queryKey: worldId ? keys.entryTypes(worldId) : ["entry-types", "none"],
@@ -78,10 +88,10 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
   const selectedTypeLabel = (selectedType?.name ?? draft.typeSlug) || "Select type";
 
   const deleteMutation = useMutation({
-    mutationFn: () => deleteEntry(entry.id),
+    mutationFn: () => deleteEntry(entryId),
     onSuccess: async () => {
-      useDraftStore.getState().dropDraft(entry.id);
-      closeTab(entry.id);
+      useDraftStore.getState().dropDraft(entryId);
+      closeTab(entryId);
       if (worldId) {
         await queryClient.invalidateQueries({ queryKey: keys.entries(worldId) });
         await queryClient.invalidateQueries({ queryKey: ["worlds", worldId, "search"] });
@@ -91,7 +101,7 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
 
   const removeRelation = useMutation({
     mutationFn: (relationId: string) => deleteRelation(relationId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.entry(entry.id) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.entry(entryId) }),
   });
 
   if (!draft) return null;
@@ -102,7 +112,7 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
       setTagInput("");
       return;
     }
-    updateDraft(entry.id, (d) => ({ ...d, tags: [...d.tags, tag] }));
+    updateDraft(entryId, (d) => ({ ...d, tags: [...d.tags, tag] }));
     setTagInput("");
   };
 
@@ -135,7 +145,7 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
                       type={t}
                       active={t.slug === draft.typeSlug}
                       onSelect={() => {
-                        updateDraft(entry.id, (d) => ({ ...d, typeSlug: t.slug }));
+                        updateDraft(entryId, (d) => ({ ...d, typeSlug: t.slug }));
                         setTypeOpen(false);
                       }}
                     />
@@ -145,26 +155,32 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
             </Popover.Portal>
           </Popover.Root>
           <div className={styles.headerActions}>
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                <IconButton label="Entry actions" data-testid={TID.entryMenu}>
-                  <DotsThree size={18} weight="bold" />
-                </IconButton>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal container={portalContainer}>
-                <DropdownMenu.Content className={styles.menu} align="end" sideOffset={4}>
-                  <DropdownMenu.Item
-                    className={styles.menuItemDanger}
-                    onSelect={() => setDeleteOpen(true)}
-                    data-testid={TID.entryDelete}>
-                    Delete entry
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
+            {!isTempEntry && (
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <IconButton label="Entry actions" data-testid={TID.entryMenu}>
+                    <DotsThree size={18} weight="bold" />
+                  </IconButton>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal container={portalContainer}>
+                  <DropdownMenu.Content className={styles.menu} align="end" sideOffset={4}>
+                    <DropdownMenu.Item
+                      className={styles.menuItemDanger}
+                      onSelect={() => setDeleteOpen(true)}
+                      data-testid={TID.entryDelete}>
+                      Delete entry
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            )}
             <Button
               onClick={() => {
-                cancelDraft(entry.id);
+                cancelDraft(entryId);
+                if (isTempEntry) {
+                  closeTab(entryId);
+                  return;
+                }
                 onExit();
               }}
               data-testid={TID.entryCancel}>
@@ -182,8 +198,8 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
         <input
           className={styles.titleInput}
           value={draft.title}
-          onChange={(e) => updateDraft(entry.id, (d) => ({ ...d, title: e.target.value }))}
-          placeholder="Entry title"
+          onChange={(e) => updateDraft(entryId, (d) => ({ ...d, title: e.target.value }))}
+          placeholder={getUntitledLabel("")}
           data-testid={TID.entryTitleInput}
         />
         <div className={styles.tags}>
@@ -191,7 +207,7 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
             <Chip
               key={tag}
               onClick={() =>
-                updateDraft(entry.id, (d) => ({ ...d, tags: d.tags.filter((t) => t !== tag) }))
+                updateDraft(entryId, (d) => ({ ...d, tags: d.tags.filter((t) => t !== tag) }))
               }>
               {tag}
               <X size={10} />
@@ -219,23 +235,27 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
         )}
       </header>
 
-      <BlockCompositor entryId={entry.id} />
+      <BlockCompositor entryId={entryId} allowArtifacts={!isTempEntry} />
 
-      <RelationBlock
-        relations={entry.relations}
-        onRemove={(r) => removeRelation.mutate(r.id)}
-        actions={<AddRelationPopover entry={entry} />}
-      />
+      {!isTempEntry && entry && (
+        <RelationBlock
+          relations={entry.relations}
+          onRemove={(r) => removeRelation.mutate(r.id)}
+          actions={<AddRelationPopover entry={entry} />}
+        />
+      )}
 
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete entry?"
-        description={`"${draft.title}" and all of its sections, images, sketches and relations will be permanently deleted.`}
-        confirmLabel="Delete"
-        danger
-        onConfirm={() => deleteMutation.mutate()}
-      />
+      {!isTempEntry && (
+        <ConfirmDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          title="Delete entry?"
+          description={`"${getUntitledLabel(draft.title)}" and all of its sections, images, sketches and relations will be permanently deleted.`}
+          confirmLabel="Delete"
+          danger
+          onConfirm={() => deleteMutation.mutate()}
+        />
+      )}
     </article>
   );
 }

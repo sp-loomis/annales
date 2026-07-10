@@ -103,6 +103,25 @@ export function draftFromDetail(detail: EntryDetail): EntryDraft {
   };
 }
 
+export function makeUntitledDraft(entryId: string, typeSlug: string): EntryDraft {
+  return {
+    entryId,
+    title: "",
+    typeSlug,
+    tags: [],
+    blocks: [],
+    deletedSectionIds: [],
+    deletedArtifacts: [],
+    createdArtifactIds: [],
+    baseline: {
+      title: "",
+      typeSlug,
+      tags: [],
+      orderSignature: "",
+    },
+  };
+}
+
 export function isDraftDirty(d: EntryDraft): boolean {
   if (d.title !== d.baseline.title) return true;
   if (d.typeSlug !== d.baseline.typeSlug) return true;

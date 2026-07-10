@@ -77,6 +77,7 @@ export const TID = {
   // settings
   settingsNav: (section: string) => `settings-nav-${section}`,
   settingsClose: "settings-close",
+  generalWorldName: "settings-general-world-name",
   worldRow: (worldId: string) => `settings-world-${worldId}`,
   worldRename: (worldId: string) => `settings-world-rename-${worldId}`,
   worldDelete: (worldId: string) => `settings-world-delete-${worldId}`,

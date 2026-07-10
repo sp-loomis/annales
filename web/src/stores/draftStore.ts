@@ -2,18 +2,21 @@
 // survive tab switches/unmounts, and so the beforeunload guard and tab-close
 // dialogs can read dirtiness outside React.
 
-import { create } from 'zustand';
-import type { EntryDetail } from '../api/types';
+import { create } from "zustand";
+import type { EntryDetail } from "../api/types";
 import {
   draftFromDetail,
   isDraftDirty,
+  makeUntitledDraft,
   type EntryDraft,
-} from '../features/library/entry/edit/draft';
+} from "../features/library/entry/edit/draft";
 
 interface DraftStore {
   drafts: Record<string, EntryDraft>;
   startDraft: (detail: EntryDetail) => void;
+  startUntitledDraft: (entryId: string, typeSlug: string) => void;
   updateDraft: (entryId: string, updater: (d: EntryDraft) => EntryDraft) => void;
+  rekeyDraft: (fromEntryId: string, toEntryId: string) => void;
   dropDraft: (entryId: string) => void;
 }
 
@@ -23,11 +26,27 @@ export const useDraftStore = create<DraftStore>((set) => ({
   startDraft: (detail) =>
     set((s) => ({ drafts: { ...s.drafts, [detail.id]: draftFromDetail(detail) } })),
 
+  startUntitledDraft: (entryId, typeSlug) =>
+    set((s) => ({ drafts: { ...s.drafts, [entryId]: makeUntitledDraft(entryId, typeSlug) } })),
+
   updateDraft: (entryId, updater) =>
     set((s) => {
       const draft = s.drafts[entryId];
       if (!draft) return s;
       return { drafts: { ...s.drafts, [entryId]: updater(draft) } };
+    }),
+
+  rekeyDraft: (fromEntryId, toEntryId) =>
+    set((s) => {
+      const draft = s.drafts[fromEntryId];
+      if (!draft) return s;
+      const { [fromEntryId]: _oldDraft, ...rest } = s.drafts;
+      return {
+        drafts: {
+          ...rest,
+          [toEntryId]: { ...draft, entryId: toEntryId },
+        },
+      };
     }),
 
   dropDraft: (entryId) =>

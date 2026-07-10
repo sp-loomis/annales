@@ -19,6 +19,7 @@ import { getEntry, listEntryTypes } from "../../../api/endpoints";
 import { useWorkspaceStore, selectWorkspace } from "../../../stores/workspaceStore";
 import { useDraftStore, useIsDirty } from "../../../stores/draftStore";
 import { isDraftDirty } from "../entry/edit/draft";
+import { getUntitledLabel, isTempEntryId } from "../entry/tempEntry";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { IconButton } from "../../../components/IconButton";
 import { WorldIcon } from "../../../components/icons/WorldIcon";
@@ -40,16 +41,22 @@ function Tab({
 }) {
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const dirty = useIsDirty(entryId);
+  const draft = useDraftStore((s) => s.drafts[entryId]);
+  const isTempEntry = isTempEntryId(entryId);
   const { data: entry } = useQuery({
     queryKey: keys.entry(entryId),
     queryFn: () => getEntry(entryId),
+    enabled: !isTempEntry,
   });
   const { data: types } = useQuery({
     queryKey: worldId ? keys.entryTypes(worldId) : ["entry-types", "none"],
     queryFn: () => listEntryTypes(worldId!),
     enabled: worldId !== null,
   });
-  const type = types?.items.find((t) => t.slug === entry?.type);
+  const typeSlug = entry?.type ?? draft?.typeSlug;
+  const type = types?.items.find((t) => t.slug === typeSlug);
+  const title =
+    entry?.title ?? (draft ? getUntitledLabel(draft.title) : isTempEntry ? "Untitled" : "…");
 
   return (
     <div
@@ -57,7 +64,7 @@ function Tab({
       data-testid={TID.tab(entryId)}>
       <button type="button" className={styles.tabLabel} onClick={onSelect}>
         <WorldIcon iconName={type?.iconName} iconWeight={type?.iconWeight} size={13} />
-        <span className={styles.tabTitle}>{entry?.title ?? "…"}</span>
+        <span className={styles.tabTitle}>{title}</span>
       </button>
       <button
         type="button"
@@ -111,7 +118,11 @@ export function TabBar() {
   };
 
   const pendingTitle = pendingClose
-    ? (queryClient.getQueryData<{ title: string }>(keys.entry(pendingClose))?.title ?? "this entry")
+    ? getUntitledLabel(
+        queryClient.getQueryData<{ title: string }>(keys.entry(pendingClose))?.title ??
+          useDraftStore.getState().drafts[pendingClose]?.title ??
+          ""
+      )
     : "";
 
   const fullscreenLabel = shellControls?.isFullscreen
@@ -203,16 +214,21 @@ export function TabBar() {
 }
 
 function OverflowItem({ entryId, onSelect }: { entryId: string; onSelect: () => void }) {
+  const draft = useDraftStore((s) => s.drafts[entryId]);
+  const isTempEntry = isTempEntryId(entryId);
   const { data: entry } = useQuery({
     queryKey: keys.entry(entryId),
     queryFn: () => getEntry(entryId),
+    enabled: !isTempEntry,
   });
+  const title =
+    entry?.title ?? (draft ? getUntitledLabel(draft.title) : isTempEntry ? "Untitled" : "…");
   return (
     <DropdownMenu.Item
       className={styles.overflowItem}
       onSelect={onSelect}
       data-testid={TID.tabOverflowItem(entryId)}>
-      {entry?.title ?? "…"}
+      {title}
     </DropdownMenu.Item>
   );
 }

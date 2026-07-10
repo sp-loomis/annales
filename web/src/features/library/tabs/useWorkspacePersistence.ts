@@ -3,11 +3,12 @@
 // Afterwards: subscribe to tab/sidebar changes outside React, debounce 750ms,
 // PUT /workspace-state. Pending writes flush on world switch/unmount.
 
-import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { keys } from '../../../api/keys';
-import { getWorkspaceState, putWorkspaceState } from '../../../api/endpoints';
-import { useWorkspaceStore } from '../../../stores/workspaceStore';
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { keys } from "../../../api/keys";
+import { getWorkspaceState, putWorkspaceState } from "../../../api/endpoints";
+import { useWorkspaceStore } from "../../../stores/workspaceStore";
+import { isTempEntryId } from "../entry/tempEntry";
 
 const DEBOUNCE_MS = 750;
 
@@ -24,7 +25,10 @@ export function useWorkspacePersistence() {
     const payloadFor = (id: string) => {
       const ws = useWorkspaceStore.getState().byWorld[id];
       if (!ws) return null;
-      return { openEntryIds: ws.openEntryIds, sidebarState: ws.sidebar };
+      return {
+        openEntryIds: ws.openEntryIds.filter((entryId) => !isTempEntryId(entryId)),
+        sidebarState: ws.sidebar,
+      };
     };
 
     useWorkspaceStore.getState().setHydrating(true);

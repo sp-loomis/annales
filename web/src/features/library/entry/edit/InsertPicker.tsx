@@ -14,11 +14,13 @@ export function InsertPicker({
   onSection,
   onImage,
   onSketch,
+  allowArtifacts = true,
 }: {
   afterKey: string;
   onSection: () => void;
   onImage: (file: File) => void;
   onSketch: () => void;
+  allowArtifacts?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -54,6 +56,7 @@ export function InsertPicker({
               type="button"
               className={styles.item}
               data-testid={TID.insertPickerImage}
+              disabled={!allowArtifacts}
               onClick={() => fileRef.current?.click()}>
               <Image size={14} />
               Image
@@ -62,6 +65,7 @@ export function InsertPicker({
               type="button"
               className={styles.item}
               data-testid={TID.insertPickerSketch}
+              disabled={!allowArtifacts}
               onClick={() => {
                 setOpen(false);
                 onSketch();

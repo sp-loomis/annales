@@ -2,7 +2,7 @@
 // the draft-backed editor (EntryEdit). Only the active tab is mounted — dirty
 // drafts survive unmount because they live in draftStore.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PencilSimple } from "@phosphor-icons/react";
 import { keys } from "../../../api/keys";
@@ -21,6 +21,7 @@ import { ImageBlockRead } from "./read/ImageBlockRead";
 import { SketchPreview } from "./read/SketchPreview";
 import { RelationBlock } from "./read/RelationBlock";
 import { EntryEdit } from "./edit/EntryEdit";
+import { isTempEntryId } from "./tempEntry";
 import { TID } from "../../../testids";
 import styles from "./EntryView.module.css";
 
@@ -40,9 +41,10 @@ function orderedBlocks(entry: EntryDetail): OrderedBlock[] {
 export function EntryView({ entryId }: { entryId: string }) {
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const closeTab = useWorkspaceStore((s) => s.closeTab);
-  const hasDraft = useDraftStore((s) => s.drafts[entryId] !== undefined);
+  const draft = useDraftStore((s) => s.drafts[entryId]);
+  const hasDraft = draft !== undefined;
   const startDraft = useDraftStore((s) => s.startDraft);
-  const [editing, setEditing] = useState(hasDraft);
+  const isTempEntry = isTempEntryId(entryId);
 
   const {
     data: entry,
@@ -51,6 +53,7 @@ export function EntryView({ entryId }: { entryId: string }) {
   } = useQuery({
     queryKey: keys.entry(entryId),
     queryFn: () => getEntry(entryId),
+    enabled: !isTempEntry,
   });
 
   const { data: types } = useQuery({
@@ -61,12 +64,13 @@ export function EntryView({ entryId }: { entryId: string }) {
 
   // Entry deleted elsewhere: close the tab silently.
   useEffect(() => {
+    if (isTempEntry) return;
     if (error instanceof ApiError && error.status === 404) closeTab(entryId);
-  }, [error, entryId, closeTab]);
+  }, [error, entryId, closeTab, isTempEntry]);
 
   const blocks = useMemo(() => (entry ? orderedBlocks(entry) : []), [entry]);
 
-  if (isLoading) {
+  if (isLoading && !isTempEntry) {
     return (
       <div className={styles.loading}>
         <Spinner size={22} />
@@ -74,12 +78,12 @@ export function EntryView({ entryId }: { entryId: string }) {
     );
   }
 
-  if (!entry) {
-    return <EmptyState message="This entry could not be loaded." />;
+  if (hasDraft) {
+    return <EntryEdit entryId={entryId} entry={entry} onExit={() => {}} />;
   }
 
-  if (editing || hasDraft) {
-    return <EntryEdit entry={entry} onExit={() => setEditing(false)} />;
+  if (!entry) {
+    return <EmptyState message="This entry could not be loaded." />;
   }
 
   const type = types?.items.find((t) => t.slug === entry.type);
@@ -108,7 +112,6 @@ export function EntryView({ entryId }: { entryId: string }) {
           <Button
             onClick={() => {
               startDraft(entry);
-              setEditing(true);
             }}
             data-testid={TID.entryEdit}>
             <PencilSimple size={14} />

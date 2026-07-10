@@ -12,6 +12,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { keys } from "../../../../api/keys";
 import {
+  createEntry,
   createSection,
   deleteArtifact,
   deleteSection,
@@ -21,7 +22,9 @@ import {
   putEntryTags,
 } from "../../../../api/endpoints";
 import { useDraftStore } from "../../../../stores/draftStore";
+import { useWorkspaceStore } from "../../../../stores/workspaceStore";
 import { isDraftDirty, orderSignature, type EntryDraft } from "./draft";
+import { getUntitledLabel, isTempEntryId } from "../tempEntry";
 
 interface SaveResult {
   ok: boolean;
@@ -169,25 +172,54 @@ export function useSaveEntry(entryId: string, worldId: string | null, onSaved: (
   const [errors, setErrors] = useState<string[]>([]);
 
   const save = async (): Promise<SaveResult> => {
-    const draft = useDraftStore.getState().drafts[entryId];
-    if (!draft) return { ok: true, errors: [] };
+    let effectiveEntryId = entryId;
+    const store = useDraftStore.getState();
+    const workspaceStore = useWorkspaceStore.getState();
+
+    const createPersistedEntry = async (draft: EntryDraft): Promise<string> => {
+      if (!worldId) throw new Error("No active world selected");
+      const created = await createEntry(worldId, {
+        type: draft.typeSlug,
+        title: getUntitledLabel(draft.title),
+        tags: draft.tags,
+      });
+      store.rekeyDraft(entryId, created.id);
+      workspaceStore.replaceTabId(entryId, created.id);
+      return created.id;
+    };
+
+    let draft = useDraftStore.getState().drafts[effectiveEntryId];
+    if (isTempEntryId(effectiveEntryId) && draft) {
+      effectiveEntryId = await createPersistedEntry(draft);
+      draft = useDraftStore.getState().drafts[effectiveEntryId];
+    }
+
     setSaving(true);
     setErrors([]);
+    if (!draft) {
+      setSaving(false);
+      return { ok: true, errors: [] };
+    }
+
     try {
       const { residual, errors } = await runSave(draft);
-      await queryClient.invalidateQueries({ queryKey: keys.entry(entryId) });
+      await queryClient.invalidateQueries({ queryKey: keys.entry(effectiveEntryId) });
       if (worldId) {
         await queryClient.invalidateQueries({ queryKey: keys.entries(worldId) });
         await queryClient.invalidateQueries({ queryKey: ["worlds", worldId, "search"] });
       }
       if (errors.length === 0 && !isDraftDirty(residual)) {
-        useDraftStore.getState().dropDraft(entryId);
+        useDraftStore.getState().dropDraft(effectiveEntryId);
         onSaved();
         return { ok: true, errors: [] };
       }
       // Partial failure: keep the residual draft so a re-save retries only
       // what failed.
-      useDraftStore.getState().updateDraft(entryId, () => residual);
+      useDraftStore.getState().updateDraft(effectiveEntryId, () => residual);
+      setErrors(errors);
+      return { ok: false, errors };
+    } catch (e) {
+      const errors = [msg(e)];
       setErrors(errors);
       return { ok: false, errors };
     } finally {

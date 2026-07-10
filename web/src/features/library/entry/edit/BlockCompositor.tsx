@@ -34,6 +34,7 @@ import { InsertPicker } from "./InsertPicker";
 import { ImageBlockEdit, type PendingUpload } from "./ImageBlockEdit";
 import { SketchBlockEdit } from "./SketchBlockEdit";
 import { TID } from "../../../../testids";
+import { isTempEntryId } from "../tempEntry";
 import styles from "./BlockCompositor.module.css";
 
 const EMPTY_SCENE = JSON.stringify({
@@ -60,7 +61,13 @@ function pmNodeToText(node: PMNode | null | undefined): string {
     .trim();
 }
 
-export function BlockCompositor({ entryId }: { entryId: string }) {
+export function BlockCompositor({
+  entryId,
+  allowArtifacts = true,
+}: {
+  entryId: string;
+  allowArtifacts?: boolean;
+}) {
   const draft = useDraftStore((s) => s.drafts[entryId]);
   const updateDraft = useDraftStore((s) => s.updateDraft);
   const editorsRef = useRef(new Map<string, Editor>());
@@ -74,6 +81,7 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
 
   if (!draft) return null;
   const blocks = draft.blocks;
+  const isTempEntry = isTempEntryId(entryId);
 
   const setBlocks = (mutate: (blocks: BlockDraft[]) => BlockDraft[]) =>
     updateDraft(entryId, (d) => ({ ...d, blocks: mutate(d.blocks) }));
@@ -358,6 +366,7 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
                       onSection={() => insertSection(block.key)}
                       onImage={(file) => void insertImage(block.key, file)}
                       onSketch={() => void insertSketch(block.key)}
+                      allowArtifacts={allowArtifacts}
                     />
                     {canMerge && (
                       <button
@@ -392,9 +401,13 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
                 onSection={() => insertSection(null)}
                 onImage={(file) => void insertImage(null, file)}
                 onSketch={() => void insertSketch(null)}
+                allowArtifacts={allowArtifacts}
               />
             </div>
           </div>
+          {!allowArtifacts && isTempEntry && (
+            <p className={styles.emptyHint}>Save once before adding images or sketches.</p>
+          )}
         </>
       )}
     </div>

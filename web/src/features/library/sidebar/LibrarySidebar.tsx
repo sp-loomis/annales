@@ -1,22 +1,26 @@
-import { useState } from 'react';
-import { Plus } from '@phosphor-icons/react';
-import { useWorkspaceStore, selectWorkspace } from '../../../stores/workspaceStore';
-import { Button } from '../../../components/Button';
-import { SearchBar } from './SearchBar';
-import { FilterPanel } from './FilterPanel';
-import { DensityToggle } from './DensityToggle';
-import { ResultList } from './ResultList';
-import { useSidebarData } from './useSidebarData';
-import { NewEntryDialog } from '../entry/NewEntryDialog';
-import { TID } from '../../../testids';
-import styles from './LibrarySidebar.module.css';
+import { useQueryClient } from "@tanstack/react-query";
+import { Plus } from "@phosphor-icons/react";
+import { keys } from "../../../api/keys";
+import { listEntryTypes } from "../../../api/endpoints";
+import { useWorkspaceStore, selectWorkspace } from "../../../stores/workspaceStore";
+import { useDraftStore } from "../../../stores/draftStore";
+import { Button } from "../../../components/Button";
+import { SearchBar } from "./SearchBar";
+import { FilterPanel } from "./FilterPanel";
+import { DensityToggle } from "./DensityToggle";
+import { ResultList } from "./ResultList";
+import { useSidebarData } from "./useSidebarData";
+import { makeTempEntryId } from "../entry/tempEntry";
+import { TID } from "../../../testids";
+import styles from "./LibrarySidebar.module.css";
 
 export function LibrarySidebar() {
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const sidebar = useWorkspaceStore((s) => selectWorkspace(s).sidebar);
   const setSidebar = useWorkspaceStore((s) => s.setSidebar);
   const openTab = useWorkspaceStore((s) => s.openTab);
-  const [newEntryOpen, setNewEntryOpen] = useState(false);
+  const startUntitledDraft = useDraftStore((s) => s.startUntitledDraft);
+  const queryClient = useQueryClient();
 
   const { items, allTags, searchActive, textQueryActive, isLoading } = useSidebarData(
     worldId,
@@ -24,6 +28,19 @@ export function LibrarySidebar() {
   );
 
   if (!worldId) return null;
+
+  const createUntitledEntry = async () => {
+    const types = await queryClient.fetchQuery({
+      queryKey: keys.entryTypes(worldId),
+      queryFn: () => listEntryTypes(worldId),
+      staleTime: 30_000,
+    });
+    const defaultType = types.items[0]?.slug;
+    if (!defaultType) return;
+    const tempEntryId = makeTempEntryId();
+    startUntitledDraft(tempEntryId, defaultType);
+    openTab(tempEntryId);
+  };
 
   const filterCount = sidebar.typeSlugs.length + sidebar.tags.length;
 
@@ -41,16 +58,18 @@ export function LibrarySidebar() {
       )}
       <div className={styles.listHeader}>
         <span className={styles.count}>
-          {items.length} {items.length === 1 ? 'entry' : 'entries'}
+          {items.length} {items.length === 1 ? "entry" : "entries"}
         </span>
         <div className={styles.headerActions}>
-          <DensityToggle density={sidebar.density} onChange={(density) => setSidebar({ density })} />
+          <DensityToggle
+            density={sidebar.density}
+            onChange={(density) => setSidebar({ density })}
+          />
           <Button
             variant="ghost"
             className={styles.newEntry}
-            onClick={() => setNewEntryOpen(true)}
-            data-testid={TID.newEntryButton}
-          >
+            onClick={() => void createUntitledEntry()}
+            data-testid={TID.newEntryButton}>
             <Plus size={13} />
             New
           </Button>
@@ -68,12 +87,6 @@ export function LibrarySidebar() {
           onOpen={openTab}
         />
       </div>
-      <NewEntryDialog
-        worldId={worldId}
-        open={newEntryOpen}
-        onOpenChange={setNewEntryOpen}
-        onCreated={openTab}
-      />
     </div>
   );
 }

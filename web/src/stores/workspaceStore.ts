@@ -2,16 +2,16 @@
 // prefs. Persisted per world to /workspace-state (see useWorkspacePersistence);
 // this store is the live source of truth while the app runs.
 
-import { create } from 'zustand';
-import type { Density, GroupBy, SidebarPrefs, SortMode } from '../api/types';
+import { create } from "zustand";
+import type { Density, GroupBy, SidebarPrefs, SortMode } from "../api/types";
 
 export const DEFAULT_SIDEBAR: SidebarPrefs = {
-  query: '',
+  query: "",
   typeSlugs: [],
   tags: [],
-  sort: 'updated',
-  groupBy: 'none',
-  density: 'comfortable',
+  sort: "updated",
+  groupBy: "none",
+  density: "comfortable",
   filtersOpen: false,
 };
 
@@ -51,6 +51,7 @@ interface WorkspaceStore {
   openTab: (entryId: string) => void;
   closeTab: (entryId: string) => void;
   setActiveTab: (entryId: string) => void;
+  replaceTabId: (fromEntryId: string, toEntryId: string) => void;
 
   setSidebar: (patch: Partial<SidebarPrefs>) => void;
 }
@@ -71,9 +72,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
       activeWorldId: worldId,
       // Ensure a real workspace entry exists so selectors read stored refs.
       byWorld:
-        worldId && !s.byWorld[worldId]
-          ? { ...s.byWorld, [worldId]: emptyWorkspace() }
-          : s.byWorld,
+        worldId && !s.byWorld[worldId] ? { ...s.byWorld, [worldId]: emptyWorkspace() } : s.byWorld,
     })),
   setHydrating: (v) => set({ hydrating: v }),
 
@@ -124,6 +123,24 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
       if (!worldId) return s;
       const ws = s.byWorld[worldId] ?? emptyWorkspace();
       return { byWorld: { ...s.byWorld, [worldId]: { ...ws, activeEntryId: entryId } } };
+    }),
+
+  replaceTabId: (fromEntryId, toEntryId) =>
+    set((s) => {
+      const worldId = s.activeWorldId;
+      if (!worldId || fromEntryId === toEntryId) return s;
+      const ws = s.byWorld[worldId] ?? emptyWorkspace();
+      const idx = ws.openEntryIds.indexOf(fromEntryId);
+      if (idx === -1) return s;
+
+      const openEntryIds = [...ws.openEntryIds];
+      openEntryIds[idx] = toEntryId;
+      const deduped = [...new Set(openEntryIds)];
+      const activeEntryId = ws.activeEntryId === fromEntryId ? toEntryId : ws.activeEntryId;
+
+      return {
+        byWorld: { ...s.byWorld, [worldId]: { ...ws, openEntryIds: deduped, activeEntryId } },
+      };
     }),
 
   setSidebar: (patch) =>
