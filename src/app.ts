@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
+import cors from '@fastify/cors';
 import { PrismaClient } from '@prisma/client';
 import { type AppConfig, configFromEnv } from './config.js';
 import { AppError } from './lib/errors.js';
@@ -31,6 +32,10 @@ export async function buildApp(overrides: Partial<AppConfig> = {}): Promise<Fast
   const app = Fastify({
     logger: false,
     ajv: { customOptions: { allowUnionTypes: true } },
+  });
+
+  await app.register(cors, {
+    origin: (process.env.CORS_ORIGINS ?? 'http://localhost:5173').split(','),
   });
 
   const prisma = new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
