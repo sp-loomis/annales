@@ -10,7 +10,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
   box-shadow: var(--shadow-popover);
-  overflow: hidden;
+  overflow: visible;
   z-index: 30;
 }
 
@@ -23,6 +23,8 @@
   border-right: 1px solid var(--border);
   background: var(--surface-1);
   flex-shrink: 0;
+  border-radius: var(--radius-l) 0 0 var(--radius-l);
+  overflow: hidden;
 }
 
 .title {
@@ -61,6 +63,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  border-radius: 0 var(--radius-l) var(--radius-l) 0;
+  overflow: visible;
 }
 
 .panelHeader {
