@@ -175,6 +175,7 @@ export interface WorldTheme {
   surfaceColor: string | null;
   darkMode: boolean;
   defaultIconWeight: string;
+  uiScale: "small" | "medium" | "large";
 }
 
 export type Density = "compact" | "comfortable" | "detailed";

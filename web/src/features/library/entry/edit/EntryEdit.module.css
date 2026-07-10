@@ -9,14 +9,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: calc(12px * var(--ui-scale-factor));
 }
 
 .typeTrigger {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 10px;
+  gap: var(--ui-gap-m);
+  padding: calc(4px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor));
   border: none;
   border-radius: var(--radius-m);
   background: none;
@@ -31,7 +31,7 @@
 .typeTriggerInner {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--ui-gap-s);
   min-width: 0;
 }
 
@@ -43,7 +43,7 @@
 
 .typeTriggerLabel {
   font-family: var(--font-world);
-  font-size: 16px;
+  font-size: calc(16px * var(--ui-scale-factor));
   font-weight: 600;
   color: var(--accent-text);
   overflow: hidden;
@@ -72,9 +72,9 @@
 .typeRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ui-gap-m);
   width: 100%;
-  padding: 7px 10px;
+  padding: calc(7px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor));
   border: none;
   border-radius: var(--radius-m);
   background: none;
@@ -98,7 +98,7 @@
 
 .typeName {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--ui-font-size);
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -108,7 +108,13 @@
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ui-gap-m);
+}
+
+.editorActionButton {
+  padding: calc(4px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor));
+  min-height: calc(26px * var(--ui-scale-factor));
+  font-size: calc(12px * var(--ui-scale-factor));
 }
 
 .titleInput {
@@ -133,13 +139,13 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--ui-gap-s);
 }
 
 .tagInput {
   width: 110px;
-  padding: 2px 8px;
-  font-size: 12px;
+  padding: calc(2px * var(--ui-scale-factor)) calc(8px * var(--ui-scale-factor));
+  font-size: var(--ui-font-size-small);
 }
 
 .errors {
@@ -162,9 +168,9 @@
 }
 
 .menuItemDanger {
-  padding: 6px 10px;
+  padding: calc(6px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor));
   border-radius: var(--radius-s);
-  font-size: 13px;
+  font-size: var(--ui-font-size);
   color: var(--danger);
   cursor: pointer;
   outline: none;

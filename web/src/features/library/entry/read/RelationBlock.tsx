@@ -11,6 +11,7 @@ import { useWorkspaceStore } from '../../../../stores/workspaceStore';
 import { WorldIcon } from '../../../../components/icons/WorldIcon';
 import { IconButton } from '../../../../components/IconButton';
 import { TID } from '../../../../testids';
+import { useScaledPx } from '../../../../theme/ui-scale';
 import styles from './RelationBlock.module.css';
 
 export function RelationBlock({
@@ -24,12 +25,15 @@ export function RelationBlock({
   /** Present in edit mode: the add-relation control. */
   actions?: ReactNode;
 }) {
+  const headerIconSize = useScaledPx(14);
+  const relationIconSize = useScaledPx(13);
+  const removeIconSize = useScaledPx(12);
   const openTab = useWorkspaceStore((s) => s.openTab);
 
   return (
     <section className={styles.block}>
       <div className={styles.header}>
-        <ArrowsLeftRight size={14} />
+        <ArrowsLeftRight size={headerIconSize} />
         <span>Relations</span>
         {actions}
       </div>
@@ -47,14 +51,18 @@ export function RelationBlock({
                 onClick={() => openTab(r.otherEntry.id)}
               >
                 <span className={styles.relName}>
-                  <WorldIcon iconName={r.type.iconName} iconWeight={r.type.iconWeight} size={13} />
+                  <WorldIcon
+                    iconName={r.type.iconName}
+                    iconWeight={r.type.iconWeight}
+                    size={relationIconSize}
+                  />
                   {r.direction === 'out' ? r.type.name : (r.type.inverseName ?? r.type.name)}
                 </span>
                 <span className={styles.target}>
                   <WorldIcon
                     iconName={r.otherEntry.iconName}
                     iconWeight={r.otherEntry.iconWeight}
-                    size={13}
+                    size={relationIconSize}
                   />
                   {r.otherEntry.title}
                 </span>
@@ -66,7 +74,7 @@ export function RelationBlock({
                   onClick={() => onRemove(r)}
                   data-testid={TID.relationRemove(r.id)}
                 >
-                  <X size={12} />
+                  <X size={removeIconSize} />
                 </IconButton>
               )}
             </div>

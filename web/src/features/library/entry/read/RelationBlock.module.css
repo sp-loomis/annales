@@ -7,9 +7,9 @@
 .header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--ui-gap-s);
   margin-bottom: 10px;
-  font-size: 12px;
+  font-size: var(--ui-font-size-small);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -18,7 +18,7 @@
 
 .empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--ui-font-size);
   color: var(--text-2);
   font-style: italic;
 }
@@ -46,8 +46,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 8px 10px;
+  gap: calc(3px * var(--ui-scale-factor));
+  padding: calc(8px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor));
   border: none;
   background: none;
   cursor: pointer;
@@ -58,8 +58,8 @@
 .relName {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
+  gap: var(--ui-gap-s);
+  font-size: var(--ui-font-size-small);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-2);
@@ -68,9 +68,9 @@
 .target {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--ui-gap-s);
   font-family: var(--font-world);
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale-factor));
   font-weight: 500;
   color: var(--text-1);
   overflow: hidden;

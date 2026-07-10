@@ -7,6 +7,7 @@ import { Popover } from "radix-ui";
 import { Image, PencilSimple, Plus, TextAlignLeft } from "@phosphor-icons/react";
 import { getOverlayContainer } from "../../../../lib/overlay";
 import { TID } from "../../../../testids";
+import { useScaledPx } from "../../../../theme/ui-scale";
 import styles from "./InsertPicker.module.css";
 
 export function InsertPicker({
@@ -22,6 +23,8 @@ export function InsertPicker({
   onSketch: () => void;
   allowArtifacts?: boolean;
 }) {
+  const plusIconSize = useScaledPx(13);
+  const menuIconSize = useScaledPx(14);
   const [open, setOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const portalContainer = getOverlayContainer();
@@ -35,7 +38,7 @@ export function InsertPicker({
             className={styles.plus}
             aria-label="Add item"
             data-testid={TID.insertBlock(afterKey)}>
-            <Plus size={13} />
+            <Plus size={plusIconSize} />
             <span className={styles.label}>Add Item</span>
           </button>
         </Popover.Trigger>
@@ -49,7 +52,7 @@ export function InsertPicker({
                 setOpen(false);
                 onSection();
               }}>
-              <TextAlignLeft size={14} />
+              <TextAlignLeft size={menuIconSize} />
               Section
             </button>
             <button
@@ -58,7 +61,7 @@ export function InsertPicker({
               data-testid={TID.insertPickerImage}
               disabled={!allowArtifacts}
               onClick={() => fileRef.current?.click()}>
-              <Image size={14} />
+              <Image size={menuIconSize} />
               Image
             </button>
             <button
@@ -70,7 +73,7 @@ export function InsertPicker({
                 setOpen(false);
                 onSketch();
               }}>
-              <PencilSimple size={14} />
+              <PencilSimple size={menuIconSize} />
               Sketch
             </button>
           </Popover.Content>

@@ -8,6 +8,7 @@ import {
 import { IconButton } from "../../components/IconButton";
 import { WorldSwitcher } from "./WorldSwitcher";
 import { TID } from "../../testids";
+import { useScaledPx } from "../../theme/ui-scale";
 import styles from "./Header.module.css";
 
 export function Header({
@@ -25,6 +26,7 @@ export function Header({
   isFullscreen: boolean;
   isFullscreenSupported: boolean;
 }) {
+  const iconSize = useScaledPx(18);
   const focusLabel = isFocusMode ? "Exit focus mode" : "Enter focus mode";
   const fullscreenLabel = isFullscreen
     ? "Exit fullscreen"
@@ -42,7 +44,7 @@ export function Header({
           label="World settings"
           onClick={onOpenSettings}
           data-testid={TID.settingsButton}>
-          <GearSix size={18} />
+          <GearSix size={iconSize} />
         </IconButton>
         <WorldSwitcher />
       </div>
@@ -53,7 +55,7 @@ export function Header({
           active={isFocusMode}
           aria-pressed={isFocusMode}
           data-testid={TID.focusButton}>
-          {isFocusMode ? <CornersIn size={18} /> : <CornersOut size={18} />}
+          {isFocusMode ? <CornersIn size={iconSize} /> : <CornersOut size={iconSize} />}
         </IconButton>
         <IconButton
           label={fullscreenLabel}
@@ -62,7 +64,7 @@ export function Header({
           aria-pressed={isFullscreen}
           disabled={!isFullscreenSupported}
           data-testid={TID.fullscreenButton}>
-          {isFullscreen ? <ArrowsInSimple size={18} /> : <ArrowsOutSimple size={18} />}
+          {isFullscreen ? <ArrowsInSimple size={iconSize} /> : <ArrowsOutSimple size={iconSize} />}
         </IconButton>
       </div>
     </header>

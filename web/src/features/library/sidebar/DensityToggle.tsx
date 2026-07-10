@@ -1,13 +1,14 @@
-import { Article, List, SquaresFour } from '@phosphor-icons/react';
-import { ToggleGroup } from 'radix-ui';
-import type { Density } from '../../../api/types';
-import { TID } from '../../../testids';
-import styles from './DensityToggle.module.css';
+import { Article, List, SquaresFour } from "@phosphor-icons/react";
+import { ToggleGroup } from "radix-ui";
+import type { Density } from "../../../api/types";
+import { TID } from "../../../testids";
+import { useScaledPx } from "../../../theme/ui-scale";
+import styles from "./DensityToggle.module.css";
 
 const OPTIONS: { value: Density; label: string; Icon: typeof List }[] = [
-  { value: 'compact', label: 'Compact', Icon: List },
-  { value: 'comfortable', label: 'Comfortable', Icon: SquaresFour },
-  { value: 'detailed', label: 'Detailed', Icon: Article },
+  { value: "compact", label: "Compact", Icon: List },
+  { value: "comfortable", label: "Comfortable", Icon: SquaresFour },
+  { value: "detailed", label: "Detailed", Icon: Article },
 ];
 
 export function DensityToggle({
@@ -17,6 +18,8 @@ export function DensityToggle({
   density: Density;
   onChange: (d: Density) => void;
 }) {
+  const iconSize = useScaledPx(16);
+
   return (
     <ToggleGroup.Root
       type="single"
@@ -25,8 +28,7 @@ export function DensityToggle({
         if (v) onChange(v as Density);
       }}
       className={styles.group}
-      aria-label="Result density"
-    >
+      aria-label="Result density">
       {OPTIONS.map(({ value, label, Icon }) => (
         <ToggleGroup.Item
           key={value}
@@ -34,9 +36,8 @@ export function DensityToggle({
           className={styles.item}
           aria-label={label}
           title={label}
-          data-testid={TID.densityToggle(value)}
-        >
-          <Icon size={14} />
+          data-testid={TID.densityToggle(value)}>
+          <Icon size={iconSize} />
         </ToggleGroup.Item>
       ))}
     </ToggleGroup.Root>

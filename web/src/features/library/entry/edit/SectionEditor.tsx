@@ -22,6 +22,7 @@ import {
 } from "@phosphor-icons/react";
 import type { PMNode } from "../../../../api/types";
 import { buildExtensions } from "../tiptap/extensions";
+import { useScaledPxSoft } from "../../../../theme/ui-scale";
 import styles from "./SectionEditor.module.css";
 
 const CONTENT_DEBOUNCE_MS = 300;
@@ -64,6 +65,7 @@ export function SectionEditor({
   onContentChange: (json: PMNode) => void;
   onEditorReady?: (editor: Editor | null) => void;
 }) {
+  const toolbarIconSize = useScaledPxSoft(14, 0.45);
   const timer = useRef<number | null>(null);
   const extensions = useMemo(() => buildExtensions("Write…"), []);
 
@@ -107,42 +109,42 @@ export function SectionEditor({
             active={editor.isActive("bold")}
             label="Bold"
             onClick={() => editor.chain().focus().toggleBold().run()}>
-            <TextBIcon size={14} />
+            <TextBIcon size={toolbarIconSize} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("italic")}
             label="Italic"
             onClick={() => editor.chain().focus().toggleItalic().run()}>
-            <TextItalicIcon size={14} />
+            <TextItalicIcon size={toolbarIconSize} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("code")}
             label="Inline code"
             onClick={() => editor.chain().focus().toggleCode().run()}>
-            <CodeIcon size={14} />
+            <CodeIcon size={toolbarIconSize} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("math_inline")}
             label="Inline equation (Cmd+Shift+M)"
             onClick={() => editor.chain().focus().insertInlineMath().run()}>
-            <FunctionIcon size={14} />
+            <FunctionIcon size={toolbarIconSize} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("superscript")}
             label="Superscript"
             onClick={() => editor.chain().focus().toggleSuperscript().run()}>
-            <TextSuperscriptIcon size={14} />
+            <TextSuperscriptIcon size={toolbarIconSize} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("subscript")}
             label="Subscript"
             onClick={() => editor.chain().focus().toggleSubscript().run()}>
-            <TextSubscriptIcon size={14} />
+            <TextSubscriptIcon size={toolbarIconSize} />
           </ToolbarButton>
           <span className={styles.divider} />
           <ToolbarButton
@@ -150,21 +152,21 @@ export function SectionEditor({
             active={editor.isActive("heading", { level: 2 })}
             label="Heading 2"
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
-            <TextHOneIcon size={14} />
+            <TextHOneIcon size={toolbarIconSize} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("heading", { level: 3 })}
             label="Heading 3"
             onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
-            <TextHTwoIcon size={14} />
+            <TextHTwoIcon size={toolbarIconSize} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("heading", { level: 4 })}
             label="Heading 4"
             onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}>
-            <TextHThreeIcon size={14} />
+            <TextHThreeIcon size={toolbarIconSize} />
           </ToolbarButton>
           <span className={styles.divider} />
           <ToolbarButton
@@ -172,21 +174,21 @@ export function SectionEditor({
             active={editor.isActive("bulletList")}
             label="Bullet list"
             onClick={() => editor.chain().focus().toggleBulletList().run()}>
-            <ListBulletsIcon size={14} />
+            <ListBulletsIcon size={toolbarIconSize} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("orderedList")}
             label="Ordered list"
             onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-            <ListIcon size={14} />
+            <ListIcon size={toolbarIconSize} />
           </ToolbarButton>
           <ToolbarButton
             editor={editor}
             active={editor.isActive("blockquote")}
             label="Blockquote"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}>
-            <QuotesIcon size={14} />
+            <QuotesIcon size={toolbarIconSize} />
           </ToolbarButton>
         </div>
       </div>

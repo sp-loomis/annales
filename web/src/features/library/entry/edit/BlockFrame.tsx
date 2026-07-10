@@ -7,6 +7,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { DotsSixVertical } from "@phosphor-icons/react";
 import { TID } from "../../../../testids";
+import { useScaledPxSoft } from "../../../../theme/ui-scale";
 import styles from "./BlockFrame.module.css";
 
 export function BlockFrame({
@@ -18,6 +19,7 @@ export function BlockFrame({
   children: ReactNode;
   actions?: ReactNode;
 }) {
+  const dragIconSize = useScaledPxSoft(16, 0.5);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: blockKey,
   });
@@ -36,7 +38,7 @@ export function BlockFrame({
           data-testid={TID.blockDragHandle(blockKey)}
           {...attributes}
           {...listeners}>
-          <DotsSixVertical size={16} weight="bold" />
+          <DotsSixVertical size={dragIconSize} weight="bold" />
         </button>
       </div>
       <div className={styles.content}>

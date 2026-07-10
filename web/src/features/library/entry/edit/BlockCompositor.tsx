@@ -35,6 +35,7 @@ import { ImageBlockEdit, type PendingUpload } from "./ImageBlockEdit";
 import { SketchBlockEdit } from "./SketchBlockEdit";
 import { TID } from "../../../../testids";
 import { isTempEntryId } from "../tempEntry";
+import { useScaledPx } from "../../../../theme/ui-scale";
 import styles from "./BlockCompositor.module.css";
 
 const EMPTY_SCENE = JSON.stringify({
@@ -68,6 +69,8 @@ export function BlockCompositor({
   entryId: string;
   allowArtifacts?: boolean;
 }) {
+  const actionIconSize = useScaledPx(13);
+  const mergeIconSize = useScaledPx(12);
   const draft = useDraftStore((s) => s.drafts[entryId]);
   const updateDraft = useDraftStore((s) => s.updateDraft);
   const editorsRef = useRef(new Map<string, Editor>());
@@ -267,7 +270,7 @@ export function BlockCompositor({
                           label="Delete block"
                           onClick={() => deleteBlock(block)}
                           data-testid={TID.blockDelete(block.key)}>
-                          <Trash size={13} />
+                          <Trash size={actionIconSize} />
                         </IconButton>
                       </>
                     )
@@ -281,19 +284,19 @@ export function BlockCompositor({
                               label="Split at cursor"
                               onClick={() => splitSection(block)}
                               data-testid={TID.blockSplit(block.key)}>
-                              <SplitVertical size={13} />
+                              <SplitVertical size={actionIconSize} />
                             </IconButton>
                             <IconButton
                               label="Copy text body"
                               onClick={() => void copySectionText(block)}
                               data-testid={TID.blockDuplicate(block.key)}>
-                              <Copy size={13} />
+                              <Copy size={actionIconSize} />
                             </IconButton>
                             <IconButton
                               label="Delete block"
                               onClick={() => deleteBlock(block)}
                               data-testid={TID.blockDelete(block.key)}>
-                              <Trash size={13} />
+                              <Trash size={actionIconSize} />
                             </IconButton>
                           </>
                         }
@@ -379,7 +382,7 @@ export function BlockCompositor({
                           )
                         }
                         data-testid={TID.blockMerge(block.key)}>
-                        <ArrowsInLineVerticalIcon size={12} />
+                        <ArrowsInLineVerticalIcon size={mergeIconSize} />
                         Merge Sections
                       </button>
                     )}

@@ -1,14 +1,15 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { FileDashed } from '@phosphor-icons/react';
-import { keys } from '../../../api/keys';
-import { listEntryTypes } from '../../../api/endpoints';
-import type { Density, GroupBy } from '../../../api/types';
-import { EmptyState } from '../../../components/EmptyState';
-import { Spinner } from '../../../components/Spinner';
-import { ResultCard } from './ResultCard';
-import type { SidebarItem } from './useSidebarData';
-import styles from './ResultList.module.css';
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { FileDashed } from "@phosphor-icons/react";
+import { keys } from "../../../api/keys";
+import { listEntryTypes } from "../../../api/endpoints";
+import type { Density, GroupBy } from "../../../api/types";
+import { EmptyState } from "../../../components/EmptyState";
+import { Spinner } from "../../../components/Spinner";
+import { useScaledPx } from "../../../theme/ui-scale";
+import { ResultCard } from "./ResultCard";
+import type { SidebarItem } from "./useSidebarData";
+import styles from "./ResultList.module.css";
 
 interface Group {
   key: string;
@@ -35,14 +36,15 @@ export function ResultList({
   searchActive: boolean;
   onOpen: (entryId: string) => void;
 }) {
+  const emptyIconSize = useScaledPx(26);
   const { data: types } = useQuery({
     queryKey: keys.entryTypes(worldId),
     queryFn: () => listEntryTypes(worldId),
   });
 
   const groups = useMemo<Group[]>(() => {
-    if (groupBy === 'none') return [{ key: 'all', label: '', items }];
-    if (groupBy === 'type') {
+    if (groupBy === "none") return [{ key: "all", label: "", items }];
+    if (groupBy === "type") {
       const byType = new Map<string, SidebarItem[]>();
       for (const item of items) {
         const list = byType.get(item.type) ?? [];
@@ -57,7 +59,7 @@ export function ResultList({
     }
     const byLetter = new Map<string, SidebarItem[]>();
     for (const item of items) {
-      const letter = (item.title[0] ?? '#').toUpperCase();
+      const letter = (item.title[0] ?? "#").toUpperCase();
       const list = byLetter.get(letter) ?? [];
       list.push(item);
       byLetter.set(letter, list);
@@ -78,11 +80,11 @@ export function ResultList({
   if (items.length === 0) {
     return (
       <EmptyState
-        icon={<FileDashed size={26} />}
+        icon={<FileDashed size={emptyIconSize} />}
         message={
           searchActive
-            ? 'Nothing matched. Try a different search or loosen the filters.'
-            : 'No entries yet. Create one to start chronicling this world.'
+            ? "Nothing matched. Try a different search or loosen the filters."
+            : "No entries yet. Create one to start chronicling this world."
         }
       />
     );

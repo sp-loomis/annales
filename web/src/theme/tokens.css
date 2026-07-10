@@ -3,8 +3,8 @@
    neutrals, never cold grays. */
 
 :root {
-  --font-ui: 'Inter Variable', system-ui, sans-serif;
-  --font-world: var(--world-font, 'Lora Variable'), Georgia, serif;
+  --font-ui: "Inter Variable", system-ui, sans-serif;
+  --font-world: var(--world-font, "Lora Variable"), Georgia, serif;
 
   --accent: #8a5a2b;
   --accent-soft: color-mix(in oklab, var(--accent) 16%, var(--surface-0));
@@ -20,19 +20,48 @@
 
   --danger: #a83a2e;
 
+  --ui-scale-factor: 1;
+  --ui-scale-soft-factor: calc(1 + (var(--ui-scale-factor) - 1) * 0.55);
+  --ui-font-size: calc(13px * var(--ui-scale-factor));
+  --ui-font-size-small: calc(12px * var(--ui-scale-factor));
+  --ui-icon-size-s: calc(12px * var(--ui-scale-factor));
+  --ui-icon-size-m: calc(14px * var(--ui-scale-factor));
+  --ui-icon-size-l: calc(18px * var(--ui-scale-factor));
+  --ui-control-height-s: calc(24px * var(--ui-scale-factor));
+  --ui-control-height-m: calc(28px * var(--ui-scale-factor));
+  --ui-gap-s: calc(6px * var(--ui-scale-factor));
+  --ui-gap-m: calc(8px * var(--ui-scale-factor));
+  --sidebar-min-width: calc(180px * var(--ui-scale-factor));
+
   --radius-s: 4px;
   --radius-m: 8px;
   --radius-l: 12px;
 
   --shadow-popover: 0 4px 24px rgba(20, 15, 8, 0.18);
 
-  --header-height: 48px;
-  --rail-width: 48px;
+  --header-height: calc(48px * var(--ui-scale-factor));
+  --rail-width: calc(48px * var(--ui-scale-factor));
 
   --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-[data-mode='dark'] {
+[data-ui-scale="small"] {
+  --ui-scale-factor: 1;
+}
+
+[data-ui-scale="medium"] {
+  --ui-scale-factor: 1.25;
+}
+
+[data-ui-scale="large"] {
+  --ui-scale-factor: 1.4;
+}
+
+[data-content-scale="fixed"] {
+  --ui-scale-factor: 1;
+}
+
+[data-mode="dark"] {
   --surface-base: #201b15;
   --surface-0: var(--surface-base);
   --surface-1: color-mix(in oklab, var(--surface-base) 94%, #e8dcc8);

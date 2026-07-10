@@ -145,6 +145,24 @@ describe("full-text (q)", () => {
     expect(res.body.items[0].matches[0].sourceType).toBe("geometry");
   });
 
+  it("matches partial words and stop words in indexed text", async () => {
+    const { worldId } = await seed();
+    const ilyana = await createEntry(app, worldId, { type: "character", title: "Ilyana Vex" });
+    await readySection(app, ilyana.id, "The archmage of the eastern reaches.");
+
+    const full = await api(app, "GET", `/worlds/${worldId}/search?q=archmage`);
+    expect(full.status).toBe(200);
+    expect(full.body.items.map((i: any) => i.entryId)).toContain(ilyana.id);
+
+    const partial = await api(app, "GET", `/worlds/${worldId}/search?q=mage`);
+    expect(partial.status).toBe(200);
+    expect(partial.body.items.map((i: any) => i.entryId)).toContain(ilyana.id);
+
+    const stopWord = await api(app, "GET", `/worlds/${worldId}/search?q=of`);
+    expect(stopWord.status).toBe(200);
+    expect(stopWord.body.items.map((i: any) => i.entryId)).toContain(ilyana.id);
+  });
+
   it("does not surface a section whose content has not been written", async () => {
     const { worldId, coast } = await seed();
     // A section only enters the index when contentJson is PATCHed in. A bare

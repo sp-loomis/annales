@@ -26,6 +26,7 @@ import { WorldIcon } from "../../../components/icons/WorldIcon";
 import { getOverlayContainer } from "../../../lib/overlay";
 import { TID } from "../../../testids";
 import { useShellChromeControls } from "../../shell/ShellChromeContext";
+import { useScaledPxSoft } from "../../../theme/ui-scale";
 import styles from "./TabBar.module.css";
 
 function Tab({
@@ -39,6 +40,9 @@ function Tab({
   onSelect: () => void;
   onClose: () => void;
 }) {
+  const tabTypeIconSize = useScaledPxSoft(13);
+  const tabDirtyIconSize = useScaledPxSoft(8);
+  const tabCloseIconSize = useScaledPxSoft(11);
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const dirty = useIsDirty(entryId);
   const draft = useDraftStore((s) => s.drafts[entryId]);
@@ -63,7 +67,7 @@ function Tab({
       className={[styles.tab, active ? styles.active : ""].filter(Boolean).join(" ")}
       data-testid={TID.tab(entryId)}>
       <button type="button" className={styles.tabLabel} onClick={onSelect}>
-        <WorldIcon iconName={type?.iconName} iconWeight={type?.iconWeight} size={13} />
+        <WorldIcon iconName={type?.iconName} iconWeight={type?.iconWeight} size={tabTypeIconSize} />
         <span className={styles.tabTitle}>{title}</span>
       </button>
       <button
@@ -75,14 +79,16 @@ function Tab({
         }}
         aria-label="Close tab"
         data-testid={TID.tabClose(entryId)}>
-        {dirty ? <Circle size={8} weight="fill" className={styles.dirtyDot} /> : null}
-        <X size={11} className={dirty ? styles.closeIconDirty : undefined} />
+        {dirty ? <Circle size={tabDirtyIconSize} weight="fill" className={styles.dirtyDot} /> : null}
+        <X size={tabCloseIconSize} className={dirty ? styles.closeIconDirty : undefined} />
       </button>
     </div>
   );
 }
 
 export function TabBar() {
+  const focusIconSize = useScaledPxSoft(16);
+  const overflowIconSize = useScaledPxSoft(13);
   const shellControls = useShellChromeControls();
   const portalContainer = getOverlayContainer();
   const openEntryIds = useWorkspaceStore((s) => selectWorkspace(s).openEntryIds);
@@ -152,7 +158,7 @@ export function TabBar() {
             active
             aria-pressed
             data-testid={TID.focusButton}>
-            <CornersIn size={16} />
+            <CornersIn size={focusIconSize} />
           </IconButton>
           <IconButton
             label={fullscreenLabel}
@@ -162,9 +168,9 @@ export function TabBar() {
             disabled={!shellControls.isFullscreenSupported}
             data-testid={TID.fullscreenButton}>
             {shellControls.isFullscreen ? (
-              <ArrowsInSimple size={16} />
+              <ArrowsInSimple size={focusIconSize} />
             ) : (
-              <ArrowsOutSimple size={16} />
+              <ArrowsOutSimple size={focusIconSize} />
             )}
           </IconButton>
         </div>
@@ -177,7 +183,7 @@ export function TabBar() {
               className={styles.overflowTrigger}
               aria-label="All open tabs"
               data-testid={TID.tabOverflowTrigger}>
-              <CaretDown size={13} />
+              <CaretDown size={overflowIconSize} />
             </button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal container={portalContainer}>

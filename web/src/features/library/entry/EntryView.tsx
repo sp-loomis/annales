@@ -23,6 +23,7 @@ import { RelationBlock } from "./read/RelationBlock";
 import { EntryEdit } from "./edit/EntryEdit";
 import { isTempEntryId } from "./tempEntry";
 import { TID } from "../../../testids";
+import { useScaledPx } from "../../../theme/ui-scale";
 import styles from "./EntryView.module.css";
 
 type OrderedBlock =
@@ -39,6 +40,8 @@ function orderedBlocks(entry: EntryDetail): OrderedBlock[] {
 }
 
 export function EntryView({ entryId }: { entryId: string }) {
+  const typeIconSize = useScaledPx(13);
+  const editIconSize = useScaledPx(14);
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const closeTab = useWorkspaceStore((s) => s.closeTab);
   const draft = useDraftStore((s) => s.drafts[entryId]);
@@ -97,7 +100,7 @@ export function EntryView({ entryId }: { entryId: string }) {
         <div className={styles.meta}>
           <span className={styles.typeBadge}>
             <span className={styles.typeBadgeIcon}>
-              <WorldIcon iconName={type?.iconName} iconWeight={type?.iconWeight} size={13} />
+              <WorldIcon iconName={type?.iconName} iconWeight={type?.iconWeight} size={typeIconSize} />
             </span>
             <span className={styles.typeBadgeLabel}>{type?.name ?? entry.type}</span>
           </span>
@@ -110,36 +113,39 @@ export function EntryView({ entryId }: { entryId: string }) {
         <div className={styles.titleRow}>
           <h1 className={styles.title}>{entry.title}</h1>
           <Button
+            className={styles.editButton}
             onClick={() => {
               startDraft(entry);
             }}
             data-testid={TID.entryEdit}>
-            <PencilSimple size={14} />
+            <PencilSimple size={editIconSize} />
             Edit
           </Button>
         </div>
       </header>
 
-      {blocks.length === 0 ? (
-        <EmptyState message="This page is blank. Edit the entry to add a first section." />
-      ) : (
-        blocks.map((block) => {
-          if (block.kind === "section") {
-            const section = sectionById.get(block.id)!;
-            return (
-              <div key={block.id} className={styles.sectionBlock}>
-                <ProseRenderer doc={section.contentJson} />
-              </div>
-            );
-          }
-          if (block.kind === "image") {
-            const image = imageById.get(block.id)!;
-            return <ImageBlockRead key={block.id} imageId={image.id} label={image.label} />;
-          }
-          const sketch = sketchById.get(block.id)!;
-          return <SketchPreview key={block.id} sketchId={sketch.id} label={sketch.label} />;
-        })
-      )}
+      <div data-content-scale="fixed">
+        {blocks.length === 0 ? (
+          <EmptyState message="This page is blank. Edit the entry to add a first section." />
+        ) : (
+          blocks.map((block) => {
+            if (block.kind === "section") {
+              const section = sectionById.get(block.id)!;
+              return (
+                <div key={block.id} className={styles.sectionBlock}>
+                  <ProseRenderer doc={section.contentJson} />
+                </div>
+              );
+            }
+            if (block.kind === "image") {
+              const image = imageById.get(block.id)!;
+              return <ImageBlockRead key={block.id} imageId={image.id} label={image.label} />;
+            }
+            const sketch = sketchById.get(block.id)!;
+            return <SketchPreview key={block.id} sketchId={sketch.id} label={sketch.label} />;
+          })
+        )}
+      </div>
 
       <RelationBlock relations={entry.relations} />
     </article>

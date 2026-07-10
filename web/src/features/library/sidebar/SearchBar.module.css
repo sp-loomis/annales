@@ -1,8 +1,9 @@
 .bar {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 10px 8px;
+  gap: var(--ui-gap-s);
+  padding: calc(10px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor))
+    calc(8px * var(--ui-scale-factor));
 }
 
 .inputWrap {
@@ -21,19 +22,20 @@
 
 .input {
   padding-left: 28px;
+  font-size: var(--ui-font-size);
 }
 
 .badge {
   position: absolute;
   top: -2px;
   right: -2px;
-  min-width: 14px;
-  height: 14px;
-  padding: 0 3px;
+  min-width: calc(14px * var(--ui-scale-factor));
+  height: calc(14px * var(--ui-scale-factor));
+  padding: 0 calc(3px * var(--ui-scale-factor));
   border-radius: 999px;
   background: var(--accent);
   color: var(--surface-0);
-  font-size: 9px;
+  font-size: calc(9px * var(--ui-scale-factor));
   font-weight: 700;
-  line-height: 14px;
+  line-height: calc(14px * var(--ui-scale-factor));
 }

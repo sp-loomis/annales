@@ -93,4 +93,5 @@ export const TID = {
   themeSurfaceInput: "theme-surface-input",
   themeDarkToggle: "theme-dark-toggle",
   themeIconWeight: (weight: string) => `theme-icon-weight-${weight}`,
+  themeUiScale: (scale: string) => `theme-ui-scale-${scale}`,
 } as const;

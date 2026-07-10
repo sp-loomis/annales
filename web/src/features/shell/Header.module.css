@@ -3,7 +3,7 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   height: var(--header-height);
-  padding: 0 12px;
+  padding: 0 calc(12px * var(--ui-scale-factor));
   border-bottom: 1px solid var(--border);
   background: var(--surface-0);
   flex-shrink: 0;
@@ -18,19 +18,19 @@
 .centerControls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ui-gap-m);
   justify-self: center;
 }
 
 .right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ui-gap-m);
   justify-self: end;
 }
 
 .logo {
-  font-size: 13px;
+  font-size: var(--ui-font-size);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;

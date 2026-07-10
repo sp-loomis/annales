@@ -52,26 +52,26 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 0 8px;
+  gap: var(--ui-gap-s);
+  padding: 0 calc(8px * var(--ui-scale-factor));
   background: transparent;
 }
 
 .interstitialControlsWithMerge {
-  gap: 6px;
+  gap: var(--ui-gap-m);
 }
 
 .mergeButton {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 0 11px;
-  min-height: 28px;
+  gap: var(--ui-gap-s);
+  padding: 0 calc(11px * var(--ui-scale-factor));
+  min-height: calc(28px * var(--ui-scale-factor));
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface-0);
   color: var(--text-2);
-  font-size: 12px;
+  font-size: var(--ui-font-size-small);
   font-weight: 500;
   cursor: pointer;
   opacity: 0;
@@ -95,7 +95,7 @@
 .emptyHint {
   margin: 8px 0;
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--ui-font-size);
   font-style: italic;
   text-align: center;
 }

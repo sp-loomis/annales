@@ -30,6 +30,43 @@ interface SearchQuery {
   cursor?: string;
 }
 
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
+function buildSubstringSnippet(text: string, query: string): string {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized) return '';
+
+  const q = query.trim();
+  if (!q) return normalized.slice(0, 200);
+
+  const lower = normalized.toLowerCase();
+  const qLower = q.toLowerCase();
+  const hit = lower.indexOf(qLower);
+  if (hit < 0) return normalized.slice(0, 200);
+
+  const contextBefore = 48;
+  const contextAfter = 96;
+  const start = Math.max(0, hit - contextBefore);
+  const end = Math.min(normalized.length, hit + q.length + contextAfter);
+  const fragment = normalized.slice(start, end);
+  const localHit = fragment.toLowerCase().indexOf(qLower);
+  if (localHit < 0) return fragment;
+
+  const prefix = start > 0 ? '... ' : '';
+  const suffix = end < normalized.length ? ' ...' : '';
+  return (
+    prefix +
+    fragment.slice(0, localHit) +
+    '<b>' +
+    fragment.slice(localHit, localHit + q.length) +
+    '</b>' +
+    fragment.slice(localHit + q.length) +
+    suffix
+  );
+}
+
 function parseBbox(raw: string): Bbox {
   const parts = raw.split(',').map(Number);
   if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n))) {
@@ -104,6 +141,7 @@ export function searchRoutes(app: FastifyInstance): void {
       const { worldId } = req.params;
       const { q, type, bbox: rawBbox, globeId, exact, tickStart, tickEnd, timelineId, limit = 50 } =
         req.query;
+      const qLike = q ? `%${escapeLikePattern(q)}%` : null;
       const tags = req.query.tag === undefined ? [] : ([] as string[]).concat(req.query.tag);
 
       const world = await app.prisma.world.findUnique({ where: { id: worldId } });
@@ -133,7 +171,11 @@ export function searchRoutes(app: FastifyInstance): void {
       if (q) {
         conds.push(Prisma.sql`EXISTS (
           SELECT 1 FROM "SearchIndex" si
-          WHERE si."entryId" = e.id AND si.tsv @@ plainto_tsquery('english', ${q}))`);
+          WHERE si."entryId" = e.id
+            AND (
+              si.tsv @@ plainto_tsquery('english', ${q})
+              OR si.text ILIKE ${qLike} ESCAPE '\\'
+            ))`);
       }
       if (bbox) {
         const overlaps = qBoxes.map(
@@ -216,15 +258,35 @@ export function searchRoutes(app: FastifyInstance): void {
       >();
       if (q && ids.length > 0) {
         const rows = await app.prisma.$queryRaw<
-          { entryId: string; sourceType: string; sourceId: string; rank: number; snippet: string }[]
+          {
+            entryId: string;
+            sourceType: string;
+            sourceId: string;
+            rank: number;
+            snippet: string;
+            isFts: boolean;
+          }[]
         >(Prisma.sql`
-          SELECT si."entryId" AS "entryId", si."sourceType" AS "sourceType",
+          SELECT si."entryId" AS "entryId",
+                 si."sourceType" AS "sourceType",
                  si."sourceId" AS "sourceId",
                  ts_rank(si.tsv, plainto_tsquery('english', ${q}))::float8 AS rank,
-                 ts_headline('english', si.text, plainto_tsquery('english', ${q})) AS snippet
+                 ts_headline('english', si.text, plainto_tsquery('english', ${q})) AS snippet,
+                 true AS "isFts"
           FROM "SearchIndex" si
           WHERE si."entryId" IN (${Prisma.join(ids)})
             AND si.tsv @@ plainto_tsquery('english', ${q})
+          UNION ALL
+          SELECT si."entryId" AS "entryId",
+                 si."sourceType" AS "sourceType",
+                 si."sourceId" AS "sourceId",
+                 0::float8 AS rank,
+                 si.text AS snippet,
+                 false AS "isFts"
+          FROM "SearchIndex" si
+          WHERE si."entryId" IN (${Prisma.join(ids)})
+            AND si.text ILIKE ${qLike} ESCAPE '\\'
+            AND NOT (si.tsv @@ plainto_tsquery('english', ${q}))
           ORDER BY rank DESC`);
         for (const row of rows) {
           const bucket = matchesByEntry.get(row.entryId) ?? { rank: 0, matches: [] };
@@ -232,7 +294,7 @@ export function searchRoutes(app: FastifyInstance): void {
           bucket.matches.push({
             sourceType: row.sourceType,
             sourceId: row.sourceId,
-            snippet: row.snippet,
+            snippet: row.isFts ? row.snippet : buildSubstringSnippet(row.snippet, q),
           });
           matchesByEntry.set(row.entryId, bucket);
         }

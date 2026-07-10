@@ -1,12 +1,12 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
+  gap: calc(4px * var(--ui-scale-factor));
+  padding: calc(2px * var(--ui-scale-factor)) calc(8px * var(--ui-scale-factor));
   border: 1px solid var(--border);
   border-radius: 999px;
   background: none;
-  font-size: 12px;
+  font-size: var(--ui-font-size-small);
   color: var(--text-2);
   white-space: nowrap;
 }

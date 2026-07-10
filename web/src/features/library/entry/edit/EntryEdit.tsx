@@ -25,6 +25,7 @@ import { getUntitledLabel, isTempEntryId } from "../tempEntry";
 import { WorldIcon } from "../../../../components/icons/WorldIcon";
 import { getOverlayContainer } from "../../../../lib/overlay";
 import { TID } from "../../../../testids";
+import { useScaledPx } from "../../../../theme/ui-scale";
 import entryStyles from "../EntryView.module.css";
 import styles from "./EntryEdit.module.css";
 
@@ -39,13 +40,14 @@ function TypeRow({
   active: boolean;
   onSelect: () => void;
 }) {
+  const typeIconSize = useScaledPx(13);
   return (
     <button
       type="button"
       className={[styles.typeRow, active ? styles.activeTypeRow : ""].filter(Boolean).join(" ")}
       onClick={onSelect}>
       <span className={styles.typeRowIcon}>
-        <WorldIcon iconName={type.iconName} iconWeight={type.iconWeight} size={13} />
+        <WorldIcon iconName={type.iconName} iconWeight={type.iconWeight} size={typeIconSize} />
       </span>
       <span className={styles.typeName}>{type.name}</span>
     </button>
@@ -61,6 +63,10 @@ export function EntryEdit({
   entry?: EntryDetail;
   onExit: () => void;
 }) {
+  const typeIconSize = useScaledPx(13);
+  const typeChevronSize = useScaledPx(12);
+  const menuIconSize = useScaledPx(18);
+  const tagCloseIconSize = useScaledPx(10);
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const closeTab = useWorkspaceStore((s) => s.closeTab);
   const draft = useDraftStore((s) => s.drafts[entryId]);
@@ -128,12 +134,12 @@ export function EntryEdit({
                     <WorldIcon
                       iconName={selectedType?.iconName}
                       iconWeight={selectedType?.iconWeight}
-                      size={13}
+                      size={typeIconSize}
                     />
                   </span>
                   <span className={styles.typeTriggerLabel}>{selectedTypeLabel}</span>
                 </span>
-                <CaretDown size={12} />
+                <CaretDown size={typeChevronSize} />
               </button>
             </Popover.Trigger>
             <Popover.Portal container={portalContainer}>
@@ -159,7 +165,7 @@ export function EntryEdit({
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
                   <IconButton label="Entry actions" data-testid={TID.entryMenu}>
-                    <DotsThree size={18} weight="bold" />
+                    <DotsThree size={menuIconSize} weight="bold" />
                   </IconButton>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Portal container={portalContainer}>
@@ -175,6 +181,7 @@ export function EntryEdit({
               </DropdownMenu.Root>
             )}
             <Button
+              className={styles.editorActionButton}
               onClick={() => {
                 cancelDraft(entryId);
                 if (isTempEntry) {
@@ -187,6 +194,7 @@ export function EntryEdit({
               Cancel
             </Button>
             <Button
+              className={styles.editorActionButton}
               variant="primary"
               onClick={() => void save()}
               disabled={saving}
@@ -210,7 +218,7 @@ export function EntryEdit({
                 updateDraft(entryId, (d) => ({ ...d, tags: d.tags.filter((t) => t !== tag) }))
               }>
               {tag}
-              <X size={10} />
+              <X size={tagCloseIconSize} />
             </Chip>
           ))}
           <TextInput

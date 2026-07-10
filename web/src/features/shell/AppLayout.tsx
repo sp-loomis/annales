@@ -14,6 +14,7 @@ import { ModeRail } from "./ModeRail";
 import { TID } from "../../testids";
 import { useFullscreen } from "../../lib/useFullscreen";
 import { ShellChromeContext } from "./ShellChromeContext";
+import { useUiScale } from "../../theme/ui-scale";
 import styles from "./AppLayout.module.css";
 
 export function AppLayout({
@@ -36,6 +37,9 @@ export function AppLayout({
     enterFullscreen,
     exitFullscreen,
   } = useFullscreen(shellRef);
+  const uiScale = useUiScale();
+
+  const sidebarMinSize = uiScale === "large" ? 24 : uiScale === "medium" ? 20 : 16;
 
   const handleToggleFocus = () => {
     setIsFocusMode((prev) => {
@@ -98,7 +102,7 @@ export function AppLayout({
               ref={sidebarRef}
               collapsible
               collapsedSize={0}
-              minSize={16}
+              minSize={sidebarMinSize}
               maxSize={45}
               defaultSize={26}
               onCollapse={() => setCollapsed(true)}

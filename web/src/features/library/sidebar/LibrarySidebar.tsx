@@ -12,6 +12,7 @@ import { ResultList } from "./ResultList";
 import { useSidebarData } from "./useSidebarData";
 import { makeTempEntryId } from "../entry/tempEntry";
 import { TID } from "../../../testids";
+import { useScaledPx } from "../../../theme/ui-scale";
 import styles from "./LibrarySidebar.module.css";
 
 export function LibrarySidebar() {
@@ -26,6 +27,7 @@ export function LibrarySidebar() {
     worldId,
     sidebar
   );
+  const newIconSize = useScaledPx(13);
 
   if (!worldId) return null;
 
@@ -70,7 +72,7 @@ export function LibrarySidebar() {
             className={styles.newEntry}
             onClick={() => void createUntitledEntry()}
             data-testid={TID.newEntryButton}>
-            <Plus size={13} />
+            <Plus size={newIconSize} />
             New
           </Button>
         </div>

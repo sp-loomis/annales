@@ -2,15 +2,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: var(--ui-control-height-m);
+  height: var(--ui-control-height-m);
   padding: 0;
   border: none;
   border-radius: var(--radius-s);
   background: none;
   cursor: pointer;
   color: var(--text-2);
-  transition: background 120ms var(--ease), color 120ms var(--ease);
+  transition:
+    background 120ms var(--ease),
+    color 120ms var(--ease);
 }
 
 .iconButton:hover:not(:disabled) {

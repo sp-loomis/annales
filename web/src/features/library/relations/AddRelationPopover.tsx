@@ -17,9 +17,11 @@ import { TextInput } from "../../../components/TextInput";
 import { WorldIcon } from "../../../components/icons/WorldIcon";
 import { getOverlayContainer } from "../../../lib/overlay";
 import { TID } from "../../../testids";
+import { useScaledPx } from "../../../theme/ui-scale";
 import styles from "./AddRelationPopover.module.css";
 
 export function AddRelationPopover({ entry }: { entry: EntryDetail }) {
+  const triggerIconSize = useScaledPx(12);
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -76,7 +78,7 @@ export function AddRelationPopover({ entry }: { entry: EntryDetail }) {
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
         <Button variant="ghost" className={styles.trigger} data-testid={TID.relationAdd}>
-          <Plus size={12} />
+          <Plus size={triggerIconSize} />
           Add relation
         </Button>
       </Popover.Trigger>
@@ -156,6 +158,7 @@ export function AddRelationPopover({ entry }: { entry: EntryDetail }) {
 }
 
 function TypeIconForSlug({ slug }: { slug: string }) {
+  const iconSize = useScaledPx(12);
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const { data: types } = useQuery({
     queryKey: worldId ? keys.entryTypes(worldId) : ["entry-types", "none"],
@@ -166,5 +169,5 @@ function TypeIconForSlug({ slug }: { slug: string }) {
     enabled: worldId !== null,
   });
   const type = types?.items.find((t) => t.slug === slug);
-  return <WorldIcon iconName={type?.iconName} iconWeight={type?.iconWeight} size={12} />;
+  return <WorldIcon iconName={type?.iconName} iconWeight={type?.iconWeight} size={iconSize} />;
 }

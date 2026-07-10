@@ -243,6 +243,7 @@ model WorldTheme {
   surfaceColor      String?
   darkMode          Boolean @default(true)
   defaultIconWeight String  @default("duotone")
+  uiScale           String  @default("small")
   world             World   @relation(fields: [worldId], references: [id], onDelete: Cascade)
 }
 

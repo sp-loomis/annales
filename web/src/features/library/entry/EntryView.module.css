@@ -18,7 +18,7 @@
 .meta {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--ui-gap-s);
   flex-wrap: wrap;
   margin-bottom: 8px;
 }
@@ -26,8 +26,8 @@
 .typeBadge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+  gap: var(--ui-gap-s);
+  padding: calc(4px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor));
   border-radius: var(--radius-m);
   color: var(--text-2);
 }
@@ -40,9 +40,15 @@
 
 .typeBadgeLabel {
   font-family: var(--font-world);
-  font-size: 16px;
+  font-size: calc(16px * var(--ui-scale-factor));
   font-weight: 600;
   color: var(--accent-text);
+}
+
+.editButton {
+  padding: calc(4px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor));
+  min-height: calc(26px * var(--ui-scale-factor));
+  font-size: calc(12px * var(--ui-scale-factor));
 }
 
 .titleRow {

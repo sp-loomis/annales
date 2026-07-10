@@ -1,29 +1,32 @@
-import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { GlobeIcon } from '@phosphor-icons/react';
-import { keys } from './api/keys';
-import { listWorlds } from './api/endpoints';
-import { useWorkspaceStore } from './stores/workspaceStore';
-import { ThemeProvider } from './theme/ThemeProvider';
-import { AppLayout } from './features/shell/AppLayout';
-import { CreateWorldDialog } from './features/shell/CreateWorldDialog';
-import { EmptyState } from './components/EmptyState';
-import { Button } from './components/Button';
-import { Spinner } from './components/Spinner';
-import { LibrarySidebar } from './features/library/sidebar/LibrarySidebar';
-import { LibraryBody } from './features/library/LibraryBody';
-import { useWorkspacePersistence } from './features/library/tabs/useWorkspacePersistence';
-import { useAnyDirty } from './stores/draftStore';
-import { SettingsDialog } from './features/settings/SettingsDialog';
-import styles from './App.module.css';
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { GlobeIcon } from "@phosphor-icons/react";
+import { keys } from "./api/keys";
+import { listWorlds } from "./api/endpoints";
+import { useWorkspaceStore } from "./stores/workspaceStore";
+import { ThemeProvider } from "./theme/ThemeProvider";
+import { AppLayout } from "./features/shell/AppLayout";
+import { CreateWorldDialog } from "./features/shell/CreateWorldDialog";
+import { EmptyState } from "./components/EmptyState";
+import { Button } from "./components/Button";
+import { Spinner } from "./components/Spinner";
+import { LibrarySidebar } from "./features/library/sidebar/LibrarySidebar";
+import { LibraryBody } from "./features/library/LibraryBody";
+import { useWorkspacePersistence } from "./features/library/tabs/useWorkspacePersistence";
+import { useAnyDirty } from "./stores/draftStore";
+import { SettingsDialog } from "./features/settings/SettingsDialog";
+import { useScaledPx } from "./theme/ui-scale";
+import styles from "./App.module.css";
 
-const LAST_WORLD_KEY = 'sheaf:lastWorldId';
+const LAST_WORLD_KEY = "sheaf:lastWorldId";
 
 export default function App() {
   const activeWorldId = useWorkspaceStore((s) => s.activeWorldId);
   const setActiveWorld = useWorkspaceStore((s) => s.setActiveWorld);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const loadingIconSize = useScaledPx(24);
+  const emptyIconSize = useScaledPx(40);
 
   const { data: worlds, isLoading } = useQuery({ queryKey: keys.worlds, queryFn: listWorlds });
 
@@ -37,8 +40,8 @@ export default function App() {
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
     };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
   }, [anyDirty]);
 
   // Boot: restore the last active world, or fall back to the first one.
@@ -57,7 +60,7 @@ export default function App() {
   if (isLoading) {
     return (
       <div className={styles.center}>
-        <Spinner size={24} />
+        <Spinner size={loadingIconSize} />
       </div>
     );
   }
@@ -66,7 +69,7 @@ export default function App() {
     return (
       <div className={styles.center}>
         <EmptyState
-          icon={<GlobeIcon size={40} />}
+          icon={<GlobeIcon size={emptyIconSize} />}
           message="Every saga starts somewhere. Create your first world to begin."
           action={
             <Button variant="primary" onClick={() => setCreateOpen(true)}>

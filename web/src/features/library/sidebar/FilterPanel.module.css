@@ -14,7 +14,7 @@
 }
 
 .label {
-  font-size: 11px;
+  font-size: var(--ui-font-size-small);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -40,11 +40,11 @@
 }
 
 .select {
-  padding: 4px 6px;
+  padding: calc(4px * var(--ui-scale-factor)) calc(6px * var(--ui-scale-factor));
   border: 1px solid var(--border);
   border-radius: var(--radius-s);
   background: var(--surface-0);
-  font-size: 12px;
+  font-size: var(--ui-font-size-small);
 }
 
 @keyframes expand {
