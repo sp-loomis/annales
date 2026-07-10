@@ -12,7 +12,7 @@ export interface World {
   name: string;
 }
 
-export type IconWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
+export type IconWeight = "thin" | "light" | "regular" | "bold" | "fill" | "duotone";
 
 export interface EntryType {
   id: string;
@@ -54,12 +54,11 @@ export interface PMNode {
 
 export interface Section {
   id: string;
-  label: string | null;
   order: number;
   contentJson: PMNode | null;
 }
 
-export type ArtifactStatus = 'pending' | 'ready' | 'failed';
+export type ArtifactStatus = "pending" | "ready" | "failed";
 
 export interface ImageMeta {
   id: string;
@@ -96,7 +95,7 @@ export interface DateRangeMeta {
 
 export interface RelationView {
   id: string;
-  direction: 'out' | 'in';
+  direction: "out" | "in";
   fromId: string;
   toId: string;
   type: {
@@ -132,7 +131,7 @@ export interface PresignedDownload {
 
 export interface PresignedUpload {
   url: string;
-  method: 'PUT';
+  method: "PUT";
   expiresAt: string;
 }
 
@@ -178,9 +177,9 @@ export interface WorldTheme {
   defaultIconWeight: string;
 }
 
-export type Density = 'compact' | 'comfortable' | 'detailed';
-export type SortMode = 'updated' | 'title-asc' | 'title-desc';
-export type GroupBy = 'none' | 'type' | 'first-letter';
+export type Density = "compact" | "comfortable" | "detailed";
+export type SortMode = "updated" | "title-asc" | "title-desc";
+export type GroupBy = "none" | "type" | "first-letter";
 
 /** Client-defined shape stored in WorkspaceState.sidebarState (opaque Json to the server). */
 export interface SidebarPrefs {

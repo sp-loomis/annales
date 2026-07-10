@@ -125,7 +125,6 @@ export function EntryView({ entryId }: { entryId: string }) {
             const section = sectionById.get(block.id)!;
             return (
               <div key={block.id} className={styles.sectionBlock}>
-                {section.label && <div className={styles.sectionLabel}>{section.label}</div>}
                 <ProseRenderer doc={section.contentJson} />
               </div>
             );

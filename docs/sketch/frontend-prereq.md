@@ -5,11 +5,13 @@ Schema migrations and API changes required before frontend work begins. Ordered 
 ---
 
 ## Tier 1 — Entry model foundations
-*Required before any frontend work on entry lists, tabs, search results, or relation display.*
+
+_Required before any frontend work on entry lists, tabs, search results, or relation display._
 
 ### 1a. `EntryType` table + `Entry.type` FK migration
 
 **Schema:**
+
 ```prisma
 model EntryType {
   id          String  @id @default(uuid())
@@ -34,6 +36,7 @@ Phase 1: create `EntryType` table, seed defaults on every existing world, assign
 **Default types seeded on world creation:** Character, Location, Faction, Event, Object. All deletable if unused.
 
 **New endpoints:**
+
 ```
 GET    /worlds/:worldId/entry-types
 POST   /worlds/:worldId/entry-types     { name, slug, iconName?, iconWeight? }
@@ -57,11 +60,13 @@ Existing `PATCH /relation-types/:id` absorbs the new fields. No new endpoints ne
 ---
 
 ## Tier 2 — Content model changes
-*Required before frontend work on the entry body / block compositor.*
+
+_Required before frontend work on the entry body / block compositor._
 
 ### 2a. `Document` → `Section` + content model change
 
 **What changes:**
+
 - Table renamed `Document` → `Section`
 - `role` column dropped
 - `filePath`, `status`, `uploadExpiresAt` columns dropped (presigned upload lifecycle removed for sections)
@@ -71,14 +76,15 @@ Existing `PATCH /relation-types/:id` absorbs the new fields. No new endpoints ne
 **Migration:** existing Document rows migrate to Section rows with `contentJson: null` and `order` assigned by `createdAt` ascending within each entry.
 
 **New API surface** (replaces Document endpoints entirely):
+
 ```
-POST   /entries/:entryId/sections       { label? }
-       → 201 { id, entryId, label, order, contentJson: null }
+POST   /entries/:entryId/sections       {}
+  → 201 { id, entryId, order, contentJson: null }
 
 GET    /sections/:id
-       → 200 { id, entryId, label, order, contentJson }
+  → 200 { id, entryId, order, contentJson }
 
-PATCH  /sections/:id                    { label?, contentJson?, order? }
+PATCH  /sections/:id                    { contentJson?, order? }
        → 200
        Side effect: if contentJson present, synchronously extracts plain text
        (walk ProseMirror JSON for text nodes) and upserts SearchIndex row.
@@ -98,7 +104,8 @@ No API contract changes beyond these fields appearing in responses and being set
 ---
 
 ## Tier 3 — Entry detail response: inline relations
-*Required before frontend work on the entry body relation block.*
+
+_Required before frontend work on the entry body relation block._
 
 `GET /entries/:entryId` currently returns artifact arrays but not relations. Add `relations` to the response so the full entry view loads in a single request.
 
@@ -113,22 +120,51 @@ No API contract changes beyond these fields appearing in responses and being set
   "createdAt": "…",
   "updatedAt": "…",
   "tags": ["…"],
-  "sections":   [ { "id": "…", "label": null, "order": 1.0, "contentJson": {} } ],
-  "images":     [ { "id": "…", "label": "…", "order": 2.0, "status": "ready" } ],
-  "sketches":   [ { "id": "…", "label": null, "order": 3.0, "status": "ready" } ],
-  "geometries": [ { "id": "…", "crsId": "…", "label": "…", "order": 4.0,
-                    "status": "ready", "bboxes": [], "properties": {} } ],
-  "dateRanges": [ { "id": "…", "calendarId": "…", "rawComponents": {},
-                    "tickStart": 1042, "tickEnd": 1043, "precisionTier": "exact" } ],
-  "relations":  [ { "id": "…", "direction": "out", "fromId": "…", "toId": "…",
-                    "type": { "id": "…", "name": "…", "inverseName": "…",
-                              "iconName": "…", "iconWeight": "…" },
-                    "otherEntry": { "id": "…", "title": "…", "type": "character",
-                                    "iconName": "…", "iconWeight": "…" } } ]
+  "sections": [{ "id": "…", "order": 1.0, "contentJson": {} }],
+  "images": [{ "id": "…", "label": "…", "order": 2.0, "status": "ready" }],
+  "sketches": [{ "id": "…", "label": null, "order": 3.0, "status": "ready" }],
+  "geometries": [
+    {
+      "id": "…",
+      "crsId": "…",
+      "label": "…",
+      "order": 4.0,
+      "status": "ready",
+      "bboxes": [],
+      "properties": {}
+    }
+  ],
+  "dateRanges": [
+    {
+      "id": "…",
+      "calendarId": "…",
+      "rawComponents": {},
+      "tickStart": 1042,
+      "tickEnd": 1043,
+      "precisionTier": "exact"
+    }
+  ],
+  "relations": [
+    {
+      "id": "…",
+      "direction": "out",
+      "fromId": "…",
+      "toId": "…",
+      "type": { "id": "…", "name": "…", "inverseName": "…", "iconName": "…", "iconWeight": "…" },
+      "otherEntry": {
+        "id": "…",
+        "title": "…",
+        "type": "character",
+        "iconName": "…",
+        "iconWeight": "…"
+      }
+    }
+  ]
 }
 ```
 
 Notes:
+
 - `documents` key renamed to `sections`.
 - `direction` is `"out"` (this entry is `fromId`) or `"in"` (this entry is `toId`) — client can render directional labels without further queries.
 - `otherEntry` includes the resolved EntryType `iconName`/`iconWeight` so the relation block renders type icons without secondary lookups.
@@ -137,7 +173,8 @@ Notes:
 ---
 
 ## Tier 4 — UI persistence tables
-*Required before frontend work on world switching and workspace state restoration. Independent of Tiers 1–3.*
+
+_Required before frontend work on world switching and workspace state restoration. Independent of Tiers 1–3._
 
 ### 4a. `WorldTheme`
 
@@ -179,8 +216,9 @@ Client autosaves on tab open/close, density toggle change, filter state change. 
 
 ---
 
-## Tier 5 — Calendar support endpoints *(Calendars add-on prerequisite)*
-*Required before frontend work on the Calendars add-on (`addon-calendars.md`). Not needed for the initial build. Independent of Tiers 1–4.*
+## Tier 5 — Calendar support endpoints _(Calendars add-on prerequisite)_
+
+_Required before frontend work on the Calendars add-on (`addon-calendars.md`). Not needed for the initial build. Independent of Tiers 1–4._
 
 ### 5a. `POST /calendars/:id/param-options`
 

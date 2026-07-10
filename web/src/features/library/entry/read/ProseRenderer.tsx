@@ -4,23 +4,46 @@
 // icons and click-through. Unknown nodes render their children in a neutral
 // wrapper for forward compatibility.
 
-import type { ReactNode } from 'react';
-import type { PMNode } from '../../../../api/types';
-import { LinkChip } from './LinkChip';
-import styles from './ProseRenderer.module.css';
+import type { ReactNode } from "react";
+import katex from "katex";
+import type { PMNode } from "../../../../api/types";
+import { LinkChip } from "./LinkChip";
+import styles from "./ProseRenderer.module.css";
+
+function sourceText(node: PMNode): string {
+  if (typeof node.text === "string") return node.text;
+  return (node.content ?? []).map((child) => sourceText(child)).join("");
+}
+
+function renderInlineMath(node: PMNode) {
+  const latex = sourceText(node);
+  const html = katex.renderToString(latex, {
+    displayMode: false,
+    throwOnError: false,
+    strict: "warn",
+    trust: false,
+  });
+  return <span className={styles.mathInline} dangerouslySetInnerHTML={{ __html: html }} />;
+}
 
 function renderText(node: PMNode, key: number): ReactNode {
-  let content: ReactNode = node.text ?? '';
+  let content: ReactNode = node.text ?? "";
   for (const mark of node.marks ?? []) {
     switch (mark.type) {
-      case 'bold':
+      case "bold":
         content = <strong>{content}</strong>;
         break;
-      case 'italic':
+      case "italic":
         content = <em>{content}</em>;
         break;
-      case 'code':
+      case "code":
         content = <code>{content}</code>;
+        break;
+      case "superscript":
+        content = <sup>{content}</sup>;
+        break;
+      case "subscript":
+        content = <sub>{content}</sub>;
         break;
       default:
         break;
@@ -35,33 +58,35 @@ function renderChildren(node: PMNode): ReactNode {
 
 function Node({ node, index }: { node: PMNode; index: number }): ReactNode {
   switch (node.type) {
-    case 'text':
+    case "text":
       return renderText(node, index);
-    case 'paragraph':
+    case "paragraph":
       return <p>{renderChildren(node)}</p>;
-    case 'heading': {
+    case "heading": {
       const level = Number(node.attrs?.level ?? 2);
-      const Tag = level === 3 ? 'h3' : level === 4 ? 'h4' : 'h2';
+      const Tag = level === 3 ? "h3" : level === 4 ? "h4" : "h2";
       return <Tag>{renderChildren(node)}</Tag>;
     }
-    case 'bulletList':
+    case "bulletList":
       return <ul>{renderChildren(node)}</ul>;
-    case 'orderedList':
+    case "orderedList":
       return <ol>{renderChildren(node)}</ol>;
-    case 'listItem':
+    case "listItem":
       return <li>{renderChildren(node)}</li>;
-    case 'blockquote':
+    case "blockquote":
       return <blockquote>{renderChildren(node)}</blockquote>;
-    case 'hardBreak':
+    case "hardBreak":
       return <br />;
-    case 'entryLink':
+    case "entryLink":
       return (
         <LinkChip
-          entryId={String(node.attrs?.entryId ?? '')}
-          label={String(node.attrs?.label ?? 'Untitled')}
+          entryId={String(node.attrs?.entryId ?? "")}
+          label={String(node.attrs?.label ?? "Untitled")}
           typeSlug={node.attrs?.typeSlug ? String(node.attrs.typeSlug) : null}
         />
       );
+    case "math_inline":
+      return renderInlineMath(node);
     default:
       return <div>{renderChildren(node)}</div>;
   }

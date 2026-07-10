@@ -43,9 +43,14 @@
 }
 
 .prose code {
-  font-family: ui-monospace, 'SF Mono', monospace;
+  font-family: ui-monospace, "SF Mono", monospace;
   font-size: 0.85em;
   padding: 1px 5px;
   border-radius: var(--radius-s);
   background: var(--surface-2);
+}
+
+.mathInline {
+  display: inline-block;
+  vertical-align: middle;
 }

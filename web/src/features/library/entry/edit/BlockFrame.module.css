@@ -1,5 +1,4 @@
 .frame {
-  position: relative;
   display: flex;
   gap: 4px;
   border-radius: var(--radius-m);
@@ -51,20 +50,13 @@
   min-width: 0;
 }
 
-.actions {
-  position: absolute;
-  top: 2px;
-  right: 4px;
+.topActions {
   display: flex;
+  justify-content: flex-start;
   gap: 2px;
-  opacity: 0;
-  transition: opacity 120ms var(--ease);
+  margin: 0 0 6px;
   background: var(--surface-0);
   border: 1px solid var(--border);
   border-radius: var(--radius-s);
   padding: 1px;
-}
-
-.frame:hover .actions {
-  opacity: 1;
 }

@@ -3,27 +3,25 @@
 // Save (useSaveEntry) diffs it against `baseline`.
 //
 // Two persistence tiers (deliberate asymmetry):
-//  - Save-deferred: title/type/tags, section content/labels/create/delete,
+//  - Save-deferred: title/type/tags, section content/create/delete,
 //    block order, artifact deletes.
 //  - Immediately persisted: image/sketch uploads (progress UX needs live
 //    requests) and relations. Cancel compensates by deleting createdArtifactIds.
 
-import type { EntryDetail, PMNode } from '../../../../api/types';
-import type { UploadKind } from '../../../../api/endpoints';
+import type { EntryDetail, PMNode } from "../../../../api/types";
+import type { UploadKind } from "../../../../api/endpoints";
 
 export type BlockDraft =
   | {
-      kind: 'section';
+      kind: "section";
       key: string;
       /** undefined = created in this draft, not yet on the server */
       sectionId?: string;
-      label: string | null;
-      labelDirty: boolean;
       contentJson: PMNode | null;
       contentDirty: boolean;
     }
-  | { kind: 'image'; key: string; imageId: string; label: string | null; labelDirty: boolean }
-  | { kind: 'sketch'; key: string; sketchId: string; label: string | null; labelDirty: boolean };
+  | { kind: "image"; key: string; imageId: string; label: string | null; labelDirty: boolean }
+  | { kind: "sketch"; key: string; sketchId: string; label: string | null; labelDirty: boolean };
 
 export interface ArtifactRef {
   kind: UploadKind;
@@ -53,29 +51,27 @@ let newBlockCounter = 0;
 export const nextBlockKey = () => `new-${++newBlockCounter}`;
 
 export function orderSignature(blocks: BlockDraft[]): string {
-  return blocks.map((b) => b.key).join('|');
+  return blocks.map((b) => b.key).join("|");
 }
 
 export function draftFromDetail(detail: EntryDetail): EntryDraft {
   const blocks: BlockDraft[] = [
     ...detail.sections.map<BlockDraft>((s) => ({
-      kind: 'section',
+      kind: "section",
       key: s.id,
       sectionId: s.id,
-      label: s.label,
-      labelDirty: false,
       contentJson: s.contentJson,
       contentDirty: false,
     })),
     ...detail.images.map<BlockDraft>((i) => ({
-      kind: 'image',
+      kind: "image",
       key: i.id,
       imageId: i.id,
       label: i.label,
       labelDirty: false,
     })),
     ...detail.sketches.map<BlockDraft>((s) => ({
-      kind: 'sketch',
+      kind: "sketch",
       key: s.id,
       sketchId: s.id,
       label: s.label,
@@ -114,6 +110,6 @@ export function isDraftDirty(d: EntryDraft): boolean {
   if (d.deletedSectionIds.length > 0 || d.deletedArtifacts.length > 0) return true;
   if (orderSignature(d.blocks) !== d.baseline.orderSignature) return true;
   return d.blocks.some((b) =>
-    b.kind === 'section' ? b.contentDirty || b.labelDirty || b.sectionId === undefined : b.labelDirty
+    b.kind === "section" ? b.contentDirty || b.sectionId === undefined : b.labelDirty
   );
 }

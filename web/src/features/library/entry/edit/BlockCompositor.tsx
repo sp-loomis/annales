@@ -19,13 +19,13 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { Copy, SplitVertical, TextT, TextTSlash, Trash, ArrowsMerge } from "@phosphor-icons/react";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import type { Editor } from "@tiptap/core";
-import { ArrowsMerge } from "@phosphor-icons/react";
 import { createArtifact, finalizeArtifact, uploadToPresigned } from "../../../../api/endpoints";
 import type { PMNode } from "../../../../api/types";
 import { useDraftStore } from "../../../../stores/draftStore";
-import { TextInput } from "../../../../components/TextInput";
+import { IconButton } from "../../../../components/IconButton";
 import { mergeDocs, splitDocAtCursor } from "../../../../lib/prosemirror";
 import { nextBlockKey, type BlockDraft } from "./draft";
 import { SectionEditor } from "./SectionEditor";
@@ -102,8 +102,6 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
     insertAt(afterKey, {
       kind: "section",
       key: nextBlockKey(),
-      label: null,
-      labelDirty: false,
       contentJson: null,
       contentDirty: false,
     });
@@ -197,16 +195,12 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
           kind: "section",
           key: nextBlockKey(),
           sectionId: block.sectionId,
-          label: block.label,
-          labelDirty: false,
           contentJson: before,
           contentDirty: true,
         },
         {
           kind: "section",
           key: nextBlockKey(),
-          label: null,
-          labelDirty: false,
           contentJson: after,
           contentDirty: false,
         }
@@ -231,8 +225,6 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
         kind: "section",
         key: nextBlockKey(),
         sectionId: block.sectionId,
-        label: block.label,
-        labelDirty: false,
         contentJson: mergeDocs(docA, docB),
         contentDirty: true,
       });
@@ -261,47 +253,62 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
               <div key={block.key}>
                 <BlockFrame
                   blockKey={block.key}
-                  onDelete={() => deleteBlock(block)}
-                  onCopyText={
-                    block.kind === "section" ? () => void copySectionText(block) : undefined
-                  }
-                  onSplit={block.kind === "section" ? () => splitSection(block) : undefined}
-                  toolbarVisible={
-                    block.kind === "section"
-                      ? (toolbarVisibleByBlock[block.key] ?? false)
-                      : undefined
-                  }
-                  onToggleToolbar={
-                    block.kind === "section"
-                      ? () =>
-                          setToolbarVisibleByBlock((prev) => ({
-                            ...prev,
-                            [block.key]: !(prev[block.key] ?? false),
-                          }))
-                      : undefined
+                  actions={
+                    block.kind === "section" ? undefined : (
+                      <>
+                        <IconButton
+                          label="Delete block"
+                          onClick={() => deleteBlock(block)}
+                          data-testid={TID.blockDelete(block.key)}>
+                          <Trash size={13} />
+                        </IconButton>
+                      </>
+                    )
                   }>
                   {block.kind === "section" && (
                     <div className={styles.sectionBlock}>
-                      <TextInput
-                        className={styles.sectionLabel}
-                        placeholder="Section label (optional)"
-                        value={block.label ?? ""}
-                        onChange={(e) =>
-                          updateDraft(entryId, (d) => ({
-                            ...d,
-                            blocks: d.blocks.map((b) =>
-                              b.key === block.key && b.kind === "section"
-                                ? {
-                                    ...b,
-                                    label: e.target.value === "" ? null : e.target.value,
-                                    labelDirty: true,
-                                  }
-                                : b
-                            ),
-                          }))
-                        }
-                      />
                       <SectionEditor
+                        actionBar={
+                          <>
+                            <IconButton
+                              label={
+                                (toolbarVisibleByBlock[block.key] ?? false)
+                                  ? "Hide formatting toolbar"
+                                  : "Show formatting toolbar"
+                              }
+                              onClick={() =>
+                                setToolbarVisibleByBlock((prev) => ({
+                                  ...prev,
+                                  [block.key]: !(prev[block.key] ?? false),
+                                }))
+                              }
+                              data-testid={TID.blockToolbarToggle(block.key)}>
+                              {(toolbarVisibleByBlock[block.key] ?? false) ? (
+                                <TextTSlash size={13} />
+                              ) : (
+                                <TextT size={13} />
+                              )}
+                            </IconButton>
+                            <IconButton
+                              label="Split at cursor"
+                              onClick={() => splitSection(block)}
+                              data-testid={TID.blockSplit(block.key)}>
+                              <SplitVertical size={13} />
+                            </IconButton>
+                            <IconButton
+                              label="Copy text body"
+                              onClick={() => void copySectionText(block)}
+                              data-testid={TID.blockDuplicate(block.key)}>
+                              <Copy size={13} />
+                            </IconButton>
+                            <IconButton
+                              label="Delete block"
+                              onClick={() => deleteBlock(block)}
+                              data-testid={TID.blockDelete(block.key)}>
+                              <Trash size={13} />
+                            </IconButton>
+                          </>
+                        }
                         toolbarVisible={toolbarVisibleByBlock[block.key] ?? false}
                         initialContent={block.contentJson}
                         onContentChange={(json) =>

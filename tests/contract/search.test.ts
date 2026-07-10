@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import type { FastifyInstance } from 'fastify';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import type { FastifyInstance } from "fastify";
 import {
   makeApp,
   resetDb,
@@ -7,14 +7,15 @@ import {
   uploadTo,
   createWorld,
   createEntry,
+  createSection,
   createGlobe,
   createTimeline,
   createCrs,
   createCalendar,
   readyArtifact,
   readySection,
-} from '../helpers.js';
-import { rectFeature, triangleFeature, excalidrawScene } from '../fixtures.js';
+} from "../helpers.js";
+import { rectFeature, triangleFeature, excalidrawScene } from "../fixtures.js";
 
 let app: FastifyInstance;
 beforeAll(async () => {
@@ -39,48 +40,48 @@ async function seed() {
   const calendar = await createCalendar(app, timeline.id); // 60-day years, see helpers
 
   const coast = await createEntry(app, w.id, {
-    type: 'location',
-    title: 'The Shattered Coast',
-    tags: ['coastal'],
+    type: "location",
+    title: "The Shattered Coast",
+    tags: ["coastal"],
   });
-  await readySection(app, coast.id, 'The shattered coast lies west of the old kingdom.');
+  await readySection(app, coast.id, "The shattered coast lies west of the old kingdom.");
   await readyArtifact(
     app,
     coast.id,
-    'geometries',
-    { crsId: crs.id, label: 'territory' },
+    "geometries",
+    { crsId: crs.id, label: "territory" },
     JSON.stringify(rectFeature(0, 0, 10, 10)),
-    'application/geo+json'
+    "application/geo+json"
   );
-  await api(app, 'POST', `/entries/${coast.id}/date-ranges`, {
+  await api(app, "POST", `/entries/${coast.id}/date-ranges`, {
     calendarId: calendar.id,
-    rawComponents: { year: 2, month: 'Frostwane', day: 1 }, // ticks 60..61
-    precisionTier: 'exact',
+    rawComponents: { year: 2, month: "Frostwane", day: 1 }, // ticks 60..61
+    precisionTier: "exact",
   });
 
-  const falls = await createEntry(app, w.id, { type: 'character', title: 'The Falls' });
+  const falls = await createEntry(app, w.id, { type: "character", title: "The Falls" });
   await readyArtifact(
     app,
     falls.id,
-    'sketches',
-    { label: 'cave sketch' },
-    JSON.stringify(excalidrawScene(['waterfall cavern'])),
-    'application/json'
+    "sketches",
+    { label: "cave sketch" },
+    JSON.stringify(excalidrawScene(["waterfall cavern"])),
+    "application/json"
   );
-  await api(app, 'POST', `/entries/${falls.id}/date-ranges`, {
+  await api(app, "POST", `/entries/${falls.id}/date-ranges`, {
     calendarId: calendar.id,
     rawComponents: { year: 101 }, // ticks 6000..6060
-    precisionTier: 'circa',
+    precisionTier: "circa",
   });
 
-  const farAway = await createEntry(app, w.id, { type: 'character', title: 'Far Away' });
+  const farAway = await createEntry(app, w.id, { type: "character", title: "Far Away" });
   await readyArtifact(
     app,
     farAway.id,
-    'geometries',
+    "geometries",
     { crsId: crs.id },
     JSON.stringify(rectFeature(50, 50, 60, 60)),
-    'application/geo+json'
+    "application/geo+json"
   );
 
   return {
@@ -95,94 +96,128 @@ async function seed() {
   };
 }
 
-describe('GET /worlds/:worldId/search — guards', () => {
-  it('400s with no filters at all', async () => {
+describe("GET /worlds/:worldId/search — guards", () => {
+  it("400s with no filters at all", async () => {
     const { worldId } = await seed();
-    const res = await api(app, 'GET', `/worlds/${worldId}/search`);
+    const res = await api(app, "GET", `/worlds/${worldId}/search`);
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('VALIDATION');
+    expect(res.body.error.code).toBe("VALIDATION");
   });
 
-  it('400s on bbox without globeId', async () => {
+  it("400s on bbox without globeId", async () => {
     const { worldId } = await seed();
-    const res = await api(app, 'GET', `/worlds/${worldId}/search?bbox=0,-5,5,0`);
+    const res = await api(app, "GET", `/worlds/${worldId}/search?bbox=0,-5,5,0`);
     expect(res.status).toBe(400);
   });
 
-  it('400s on a tick window without timelineId', async () => {
+  it("400s on a tick window without timelineId", async () => {
     const { worldId } = await seed();
-    const res = await api(app, 'GET', `/worlds/${worldId}/search?tickStart=50&tickEnd=70`);
+    const res = await api(app, "GET", `/worlds/${worldId}/search?tickStart=50&tickEnd=70`);
     expect(res.status).toBe(400);
   });
 });
 
-describe('full-text (q)', () => {
-  it('finds section text with ranked, snippeted matches', async () => {
+describe("full-text (q)", () => {
+  it("finds section text with ranked, snippeted matches", async () => {
     const { worldId, coast } = await seed();
-    const res = await api(app, 'GET', `/worlds/${worldId}/search?q=shattered`);
+    const res = await api(app, "GET", `/worlds/${worldId}/search?q=shattered`);
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
     const hit = res.body.items[0];
     expect(hit.entryId).toBe(coast.id);
-    expect(hit.title).toBe('The Shattered Coast');
-    expect(typeof hit.rank).toBe('number');
-    expect(hit.matches[0].sourceType).toBe('section');
-    expect(hit.matches[0].snippet).toContain('<b>');
+    expect(hit.title).toBe("The Shattered Coast");
+    expect(typeof hit.rank).toBe("number");
+    expect(hit.matches[0].sourceType).toBe("section");
+    expect(hit.matches[0].snippet).toContain("<b>");
   });
 
-  it('finds text inside Excalidraw scenes', async () => {
+  it("finds text inside Excalidraw scenes", async () => {
     const { worldId, falls } = await seed();
-    const res = await api(app, 'GET', `/worlds/${worldId}/search?q=waterfall`);
+    const res = await api(app, "GET", `/worlds/${worldId}/search?q=waterfall`);
     expect(res.body.items.map((i: any) => i.entryId)).toEqual([falls.id]);
-    expect(res.body.items[0].matches[0].sourceType).toBe('sketch');
+    expect(res.body.items[0].matches[0].sourceType).toBe("sketch");
   });
 
-  it('finds geometry labels', async () => {
+  it("finds geometry labels", async () => {
     const { worldId, coast } = await seed();
-    const res = await api(app, 'GET', `/worlds/${worldId}/search?q=territory`);
+    const res = await api(app, "GET", `/worlds/${worldId}/search?q=territory`);
     expect(res.body.items.map((i: any) => i.entryId)).toEqual([coast.id]);
-    expect(res.body.items[0].matches[0].sourceType).toBe('geometry');
+    expect(res.body.items[0].matches[0].sourceType).toBe("geometry");
   });
 
-  it('does not surface a section whose content has not been written', async () => {
+  it("does not surface a section whose content has not been written", async () => {
     const { worldId, coast } = await seed();
     // A section only enters the index when contentJson is PATCHed in. A bare
     // section (no content yet) contributes nothing to full-text search.
-    await api(app, 'POST', `/entries/${coast.id}/sections`, { label: 'zanzibar secrets' });
+    await api(app, "POST", `/entries/${coast.id}/sections`, {});
 
-    const res = await api(app, 'GET', `/worlds/${worldId}/search?q=zanzibar`);
+    const res = await api(app, "GET", `/worlds/${worldId}/search?q=zanzibar`);
     expect(res.body.items).toEqual([]);
+  });
+
+  it("indexes LaTeX text from math nodes in section content", async () => {
+    const { worldId, coast } = await seed();
+    const section = await createSection(app, coast.id);
+    await api(app, "PATCH", `/sections/${section.id}`, {
+      contentJson: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "Conserved quantity " },
+              {
+                type: "math_inline",
+                content: [{ type: "text", text: "mathneedlealpha" }],
+              },
+            ],
+          },
+          {
+            type: "math_display",
+            content: [{ type: "text", text: "mathneedlebeta" }],
+          },
+        ],
+      },
+    });
+
+    const inlineHit = await api(app, "GET", `/worlds/${worldId}/search?q=mathneedlealpha`);
+    expect(inlineHit.status).toBe(200);
+    expect(inlineHit.body.items.map((i: any) => i.entryId)).toContain(coast.id);
+
+    const displayHit = await api(app, "GET", `/worlds/${worldId}/search?q=mathneedlebeta`);
+    expect(displayHit.status).toBe(200);
+    expect(displayHit.body.items.map((i: any) => i.entryId)).toContain(coast.id);
   });
 });
 
-describe('metadata filters', () => {
-  it('filters by type and tag, composing with q', async () => {
+describe("metadata filters", () => {
+  it("filters by type and tag, composing with q", async () => {
     const { worldId, coast } = await seed();
 
-    const byType = await api(app, 'GET', `/worlds/${worldId}/search?type=location`);
+    const byType = await api(app, "GET", `/worlds/${worldId}/search?type=location`);
     expect(byType.body.items.map((i: any) => i.entryId)).toEqual([coast.id]);
 
-    const byTag = await api(app, 'GET', `/worlds/${worldId}/search?tag=coastal`);
+    const byTag = await api(app, "GET", `/worlds/${worldId}/search?tag=coastal`);
     expect(byTag.body.items.map((i: any) => i.entryId)).toEqual([coast.id]);
 
     const composed = await api(
       app,
-      'GET',
+      "GET",
       `/worlds/${worldId}/search?q=shattered&tag=coastal&type=location`
     );
     expect(composed.body.items).toHaveLength(1);
 
-    const excluded = await api(app, 'GET', `/worlds/${worldId}/search?q=shattered&type=character`);
+    const excluded = await api(app, "GET", `/worlds/${worldId}/search?q=shattered&type=character`);
     expect(excluded.body.items).toEqual([]);
   });
 });
 
-describe('geo filter (bbox, canonical lng/lat, scoped by globe)', () => {
-  it('stage 1: returns entries whose canonical bbox overlaps', async () => {
+describe("geo filter (bbox, canonical lng/lat, scoped by globe)", () => {
+  it("stage 1: returns entries whose canonical bbox overlaps", async () => {
     const { worldId, globeId, coast, farAway } = await seed();
     const res = await api(
       app,
-      'GET',
+      "GET",
       `/worlds/${worldId}/search?bbox=5,-9,15,-1&globeId=${globeId}`
     );
     const ids = res.body.items.map((i: any) => i.entryId);
@@ -190,64 +225,78 @@ describe('geo filter (bbox, canonical lng/lat, scoped by globe)', () => {
     expect(ids).not.toContain(farAway.id);
   });
 
-  it('stage 2 (exact=true): drops bbox hits the real shape does not touch', async () => {
+  it("stage 2 (exact=true): drops bbox hits the real shape does not touch", async () => {
     const { worldId, globeId, crsId } = await seed();
     // triangleFeature(20) canonicalizes to vertices [0,0],[20,0],[0,-20];
     // its bbox is [0,-20,20,0] but the box's lower-right corner is empty.
-    const entry = await createEntry(app, worldId, { title: 'Triangle Land' });
+    const entry = await createEntry(app, worldId, { title: "Triangle Land" });
     await readyArtifact(
       app,
       entry.id,
-      'geometries',
+      "geometries",
       { crsId },
       JSON.stringify(triangleFeature(20)),
-      'application/geo+json'
+      "application/geo+json"
     );
 
     // Query box sits in that empty corner (canonical).
     const loose = await api(
       app,
-      'GET',
+      "GET",
       `/worlds/${worldId}/search?bbox=15,-19,19,-15&globeId=${globeId}`
     );
     expect(loose.body.items.map((i: any) => i.entryId)).toContain(entry.id);
 
     const exact = await api(
       app,
-      'GET',
+      "GET",
       `/worlds/${worldId}/search?bbox=15,-19,19,-15&globeId=${globeId}&exact=true`
     );
     expect(exact.body.items.map((i: any) => i.entryId)).not.toContain(entry.id);
   });
 
-  it('scopes by globe, not CRS: one box query spans every CRS under the globe', async () => {
+  it("scopes by globe, not CRS: one box query spans every CRS under the globe", async () => {
     const w = await createWorld(app);
     const globe = await createGlobe(app, w.id);
-    const crsA = await createCrs(app, globe.id, 'a');
-    const crsB = await createCrs(app, globe.id, 'b');
+    const crsA = await createCrs(app, globe.id, "a");
+    const crsB = await createCrs(app, globe.id, "b");
 
-    const eA = await createEntry(app, w.id, { title: 'A' });
-    await readyArtifact(app, eA.id, 'geometries', { crsId: crsA.id }, JSON.stringify(rectFeature(0, 0, 10, 10)), 'application/geo+json');
-    const eB = await createEntry(app, w.id, { title: 'B' });
-    await readyArtifact(app, eB.id, 'geometries', { crsId: crsB.id }, JSON.stringify(rectFeature(5, 0, 15, 10)), 'application/geo+json');
+    const eA = await createEntry(app, w.id, { title: "A" });
+    await readyArtifact(
+      app,
+      eA.id,
+      "geometries",
+      { crsId: crsA.id },
+      JSON.stringify(rectFeature(0, 0, 10, 10)),
+      "application/geo+json"
+    );
+    const eB = await createEntry(app, w.id, { title: "B" });
+    await readyArtifact(
+      app,
+      eB.id,
+      "geometries",
+      { crsId: crsB.id },
+      JSON.stringify(rectFeature(5, 0, 15, 10)),
+      "application/geo+json"
+    );
 
     // canonical: A [0,-10,10,0], B [5,-10,15,0]; this box overlaps both.
-    const res = await api(app, 'GET', `/worlds/${w.id}/search?bbox=6,-9,9,-1&globeId=${globe.id}`);
+    const res = await api(app, "GET", `/worlds/${w.id}/search?bbox=6,-9,9,-1&globeId=${globe.id}`);
     const ids = res.body.items.map((i: any) => i.entryId);
     expect(ids).toContain(eA.id);
     expect(ids).toContain(eB.id);
   });
 });
 
-describe('geo exact pass — near-global query is scoped out (conservative keep)', () => {
+describe("geo exact pass — near-global query is scoped out (conservative keep)", () => {
   // A near-global query cannot be faithfully projected into the query-local
   // azimuthal frame (its far corners fall at/behind the frame singularity). The
   // exact pass must fall back to tier-1 rather than silently DROP real hits.
-  it('keeps tier-1 hits when the query spans too much of the globe for turf', async () => {
+  it("keeps tier-1 hits when the query spans too much of the globe for turf", async () => {
     const { worldId, globeId, coast, farAway } = await seed();
     const res = await api(
       app,
-      'GET',
+      "GET",
       `/worlds/${worldId}/search?bbox=-179,-89,179,89&globeId=${globeId}&exact=true`
     );
     const ids = res.body.items.map((i: any) => i.entryId);
@@ -256,20 +305,20 @@ describe('geo exact pass — near-global query is scoped out (conservative keep)
   });
 });
 
-describe('date filter (tick overlap, scoped by timeline)', () => {
-  it('returns entries whose ranges overlap the query window', async () => {
+describe("date filter (tick overlap, scoped by timeline)", () => {
+  it("returns entries whose ranges overlap the query window", async () => {
     const { worldId, timelineId, coast, falls } = await seed();
 
     const early = await api(
       app,
-      'GET',
+      "GET",
       `/worlds/${worldId}/search?tickStart=50&tickEnd=70&timelineId=${timelineId}`
     );
     expect(early.body.items.map((i: any) => i.entryId)).toEqual([coast.id]);
 
     const late = await api(
       app,
-      'GET',
+      "GET",
       `/worlds/${worldId}/search?tickStart=5000&tickEnd=7000&timelineId=${timelineId}`
     );
     expect(late.body.items.map((i: any) => i.entryId)).toEqual([falls.id]);

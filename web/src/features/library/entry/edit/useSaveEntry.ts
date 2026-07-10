@@ -1,16 +1,16 @@
 // Save orchestration. The single Save button fans out to the per-resource API:
 //   a. entry PATCH (title/type) + tags PUT
 //   b. POST new sections (capture ids)
-//   c. PATCH dirty section content/labels + artifact labels
+//   c. PATCH dirty section content + artifact labels
 //   d. reassign block order (only when the sequence changed or blocks were added)
 //   e. DELETE removed sections/artifacts
 // Ops run allSettled per phase; each success is folded back into the draft so
 // a partial failure leaves a residual, re-saveable draft. Full success drops
 // the draft and invalidates the entry + sidebar queries.
 
-import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { keys } from '../../../../api/keys';
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { keys } from "../../../../api/keys";
 import {
   createSection,
   deleteArtifact,
@@ -19,9 +19,9 @@ import {
   patchEntry,
   patchSection,
   putEntryTags,
-} from '../../../../api/endpoints';
-import { useDraftStore } from '../../../../stores/draftStore';
-import { isDraftDirty, orderSignature, type EntryDraft } from './draft';
+} from "../../../../api/endpoints";
+import { useDraftStore } from "../../../../stores/draftStore";
+import { isDraftDirty, orderSignature, type EntryDraft } from "./draft";
 
 interface SaveResult {
   ok: boolean;
@@ -55,21 +55,20 @@ async function runSave(draft: EntryDraft): Promise<{ residual: EntryDraft; error
     );
   }
   for (const r of await Promise.allSettled(headerOps)) {
-    if (r.status === 'rejected') errors.push(msg(r.reason));
+    if (r.status === "rejected") errors.push(msg(r.reason));
   }
 
   // ---- phase b: create new sections (sequential, in block order) ----
-  const hadNewSections = d.blocks.some((b) => b.kind === 'section' && b.sectionId === undefined);
+  const hadNewSections = d.blocks.some((b) => b.kind === "section" && b.sectionId === undefined);
   for (const block of d.blocks) {
-    if (block.kind !== 'section' || block.sectionId !== undefined) continue;
+    if (block.kind !== "section" || block.sectionId !== undefined) continue;
     try {
-      const created = await createSection(d.entryId, block.label);
+      const created = await createSection(d.entryId);
       d = {
         ...d,
         blocks: d.blocks.map((b) =>
-          b.key === block.key && b.kind === 'section'
-            ? // Content (if any) still needs a PATCH — creation only sets label.
-              { ...b, sectionId: created.id, labelDirty: false, contentDirty: b.contentJson !== null }
+          b.key === block.key && b.kind === "section"
+            ? { ...b, sectionId: created.id, contentDirty: b.contentJson !== null }
             : b
         ),
       };
@@ -78,38 +77,35 @@ async function runSave(draft: EntryDraft): Promise<{ residual: EntryDraft; error
     }
   }
 
-  // ---- phase c: content + labels ----
+  // ---- phase c: section content + artifact labels ----
   const contentOps: Promise<void>[] = [];
   for (const block of d.blocks) {
-    if (block.kind === 'section') {
-      if (!block.contentDirty && !block.labelDirty) continue;
+    if (block.kind === "section") {
+      if (!block.contentDirty) continue;
       if (block.sectionId === undefined) continue; // creation failed above
       const { sectionId, key } = block;
       contentOps.push(
         patchSection(sectionId, {
           ...(block.contentDirty && block.contentJson ? { contentJson: block.contentJson } : {}),
-          ...(block.labelDirty ? { label: block.label } : {}),
         }).then(() => {
           d = {
             ...d,
             blocks: d.blocks.map((b) =>
-              b.key === key && b.kind === 'section'
-                ? { ...b, contentDirty: false, labelDirty: false }
-                : b
+              b.key === key && b.kind === "section" ? { ...b, contentDirty: false } : b
             ),
           };
         })
       );
     } else if (block.labelDirty) {
-      const kind = block.kind === 'image' ? ('images' as const) : ('sketches' as const);
-      const id = block.kind === 'image' ? block.imageId : block.sketchId;
+      const kind = block.kind === "image" ? ("images" as const) : ("sketches" as const);
+      const id = block.kind === "image" ? block.imageId : block.sketchId;
       const { key } = block;
       contentOps.push(
         patchArtifact(kind, id, { label: block.label }).then(() => {
           d = {
             ...d,
             blocks: d.blocks.map((b) =>
-              b.key === key && b.kind !== 'section' ? { ...b, labelDirty: false } : b
+              b.key === key && b.kind !== "section" ? { ...b, labelDirty: false } : b
             ),
           };
         })
@@ -117,7 +113,7 @@ async function runSave(draft: EntryDraft): Promise<{ residual: EntryDraft; error
     }
   }
   for (const r of await Promise.allSettled(contentOps)) {
-    if (r.status === 'rejected') errors.push(msg(r.reason));
+    if (r.status === "rejected") errors.push(msg(r.reason));
   }
 
   // ---- phase d: order ----
@@ -125,16 +121,16 @@ async function runSave(draft: EntryDraft): Promise<{ residual: EntryDraft; error
   if (orderChanged || hadNewSections) {
     const orderOps = d.blocks.map((block, index) => {
       const order = index + 1;
-      if (block.kind === 'section') {
+      if (block.kind === "section") {
         if (block.sectionId === undefined) return Promise.resolve();
         return patchSection(block.sectionId, { order }).then(() => undefined);
       }
-      const kind = block.kind === 'image' ? ('images' as const) : ('sketches' as const);
-      const id = block.kind === 'image' ? block.imageId : block.sketchId;
+      const kind = block.kind === "image" ? ("images" as const) : ("sketches" as const);
+      const id = block.kind === "image" ? block.imageId : block.sketchId;
       return patchArtifact(kind, id, { order }).then(() => undefined);
     });
     const results = await Promise.allSettled(orderOps);
-    const failed = results.filter((r) => r.status === 'rejected');
+    const failed = results.filter((r) => r.status === "rejected");
     for (const r of failed) errors.push(msg((r as PromiseRejectedResult).reason));
     if (failed.length === 0) {
       d = { ...d, baseline: { ...d.baseline, orderSignature: orderSignature(d.blocks) } };
@@ -158,7 +154,7 @@ async function runSave(draft: EntryDraft): Promise<{ residual: EntryDraft; error
     );
   }
   for (const r of await Promise.allSettled(deleteOps)) {
-    if (r.status === 'rejected') errors.push(msg(r.reason));
+    if (r.status === "rejected") errors.push(msg(r.reason));
   }
 
   // Saved artifacts are now owned by the entry; cancel-compensation list resets.
@@ -182,7 +178,7 @@ export function useSaveEntry(entryId: string, worldId: string | null, onSaved: (
       await queryClient.invalidateQueries({ queryKey: keys.entry(entryId) });
       if (worldId) {
         await queryClient.invalidateQueries({ queryKey: keys.entries(worldId) });
-        await queryClient.invalidateQueries({ queryKey: ['worlds', worldId, 'search'] });
+        await queryClient.invalidateQueries({ queryKey: ["worlds", worldId, "search"] });
       }
       if (errors.length === 0 && !isDraftDirty(residual)) {
         useDraftStore.getState().dropDraft(entryId);

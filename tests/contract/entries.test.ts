@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import type { FastifyInstance } from 'fastify';
-import { makeApp, resetDb, api, createWorld, createEntry, createSection } from '../helpers.js';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import type { FastifyInstance } from "fastify";
+import { makeApp, resetDb, api, createWorld, createEntry, createSection } from "../helpers.js";
 
 let app: FastifyInstance;
 beforeAll(async () => {
@@ -11,77 +11,81 @@ afterAll(async () => {
 });
 beforeEach(resetDb);
 
-describe('POST /worlds/:worldId/entries', () => {
-  it('creates an entry with tags', async () => {
+describe("POST /worlds/:worldId/entries", () => {
+  it("creates an entry with tags", async () => {
     const w = await createWorld(app);
-    const res = await api(app, 'POST', `/worlds/${w.id}/entries`, {
-      type: 'location',
-      title: 'The Shattered Coast',
-      tags: ['coastal', 'ruined'],
+    const res = await api(app, "POST", `/worlds/${w.id}/entries`, {
+      type: "location",
+      title: "The Shattered Coast",
+      tags: ["coastal", "ruined"],
     });
     expect(res.status).toBe(201);
     expect(res.body.worldId).toBe(w.id);
-    expect(res.body.type).toBe('location');
-    expect(res.body.title).toBe('The Shattered Coast');
-    expect([...res.body.tags].sort()).toEqual(['coastal', 'ruined']);
-    expect(typeof res.body.createdAt).toBe('string');
+    expect(res.body.type).toBe("location");
+    expect(res.body.title).toBe("The Shattered Coast");
+    expect([...res.body.tags].sort()).toEqual(["coastal", "ruined"]);
+    expect(typeof res.body.createdAt).toBe("string");
   });
 
-  it('rejects a missing title', async () => {
+  it("rejects a missing title", async () => {
     const w = await createWorld(app);
-    const res = await api(app, 'POST', `/worlds/${w.id}/entries`, { type: 'region' });
+    const res = await api(app, "POST", `/worlds/${w.id}/entries`, { type: "region" });
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('VALIDATION');
+    expect(res.body.error.code).toBe("VALIDATION");
   });
 
-  it('404s on an unknown world', async () => {
-    const res = await api(app, 'POST', '/worlds/00000000-0000-0000-0000-000000000000/entries', {
-      type: 'location',
-      title: 'x',
+  it("404s on an unknown world", async () => {
+    const res = await api(app, "POST", "/worlds/00000000-0000-0000-0000-000000000000/entries", {
+      type: "location",
+      title: "x",
     });
     expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error.code).toBe("NOT_FOUND");
   });
 
-  it('rejects a type slug not registered in the world (strict FK)', async () => {
+  it("rejects a type slug not registered in the world (strict FK)", async () => {
     const w = await createWorld(app);
-    const res = await api(app, 'POST', `/worlds/${w.id}/entries`, {
-      type: 'nonesuch',
-      title: 'x',
+    const res = await api(app, "POST", `/worlds/${w.id}/entries`, {
+      type: "nonesuch",
+      title: "x",
     });
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('VALIDATION');
+    expect(res.body.error.code).toBe("VALIDATION");
   });
 });
 
-describe('GET /worlds/:worldId/entries', () => {
-  it('filters by type and tag', async () => {
+describe("GET /worlds/:worldId/entries", () => {
+  it("filters by type and tag", async () => {
     const w = await createWorld(app);
-    const region = await createEntry(app, w.id, { type: 'location', title: 'Coast', tags: ['wet'] });
-    await createEntry(app, w.id, { type: 'character', title: 'Mara' });
+    const region = await createEntry(app, w.id, {
+      type: "location",
+      title: "Coast",
+      tags: ["wet"],
+    });
+    await createEntry(app, w.id, { type: "character", title: "Mara" });
 
-    const byType = await api(app, 'GET', `/worlds/${w.id}/entries?type=location`);
+    const byType = await api(app, "GET", `/worlds/${w.id}/entries?type=location`);
     expect(byType.status).toBe(200);
     expect(byType.body.items.map((e: any) => e.id)).toEqual([region.id]);
 
-    const byTag = await api(app, 'GET', `/worlds/${w.id}/entries?tag=wet`);
+    const byTag = await api(app, "GET", `/worlds/${w.id}/entries?tag=wet`);
     expect(byTag.body.items.map((e: any) => e.id)).toEqual([region.id]);
   });
 
-  it('paginates with limit + cursor', async () => {
+  it("paginates with limit + cursor", async () => {
     const w = await createWorld(app);
-    for (const title of ['One', 'Two', 'Three']) {
+    for (const title of ["One", "Two", "Three"]) {
       await createEntry(app, w.id, { title });
     }
 
-    const page1 = await api(app, 'GET', `/worlds/${w.id}/entries?limit=2`);
+    const page1 = await api(app, "GET", `/worlds/${w.id}/entries?limit=2`);
     expect(page1.status).toBe(200);
     expect(page1.body.items).toHaveLength(2);
     expect(page1.body.nextCursor).toBeTruthy();
 
     const page2 = await api(
       app,
-      'GET',
+      "GET",
       `/worlds/${w.id}/entries?limit=2&cursor=${encodeURIComponent(page1.body.nextCursor)}`
     );
     expect(page2.body.items).toHaveLength(1);
@@ -92,19 +96,17 @@ describe('GET /worlds/:worldId/entries', () => {
   });
 });
 
-describe('GET /entries/:entryId', () => {
-  it('returns the full detail shape with sections and relations', async () => {
+describe("GET /entries/:entryId", () => {
+  it("returns the full detail shape with sections and relations", async () => {
     const w = await createWorld(app);
-    const entry = await createEntry(app, w.id, { tags: ['a'] });
-    const section = await createSection(app, entry.id, { label: 'Overview' });
+    const entry = await createEntry(app, w.id, { tags: ["a"] });
+    const section = await createSection(app, entry.id);
 
-    const res = await api(app, 'GET', `/entries/${entry.id}`);
+    const res = await api(app, "GET", `/entries/${entry.id}`);
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(entry.id);
-    expect(res.body.tags).toEqual(['a']);
-    expect(res.body.sections).toEqual([
-      { id: section.id, label: 'Overview', order: 1, contentJson: null },
-    ]);
+    expect(res.body.tags).toEqual(["a"]);
+    expect(res.body.sections).toEqual([{ id: section.id, order: 1, contentJson: null }]);
     expect(res.body.images).toEqual([]);
     expect(res.body.sketches).toEqual([]);
     expect(res.body.geometries).toEqual([]);
@@ -112,50 +114,50 @@ describe('GET /entries/:entryId', () => {
     expect(res.body.relations).toEqual([]);
   });
 
-  it('404s on an unknown id', async () => {
-    const res = await api(app, 'GET', '/entries/00000000-0000-0000-0000-000000000000');
+  it("404s on an unknown id", async () => {
+    const res = await api(app, "GET", "/entries/00000000-0000-0000-0000-000000000000");
     expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error.code).toBe("NOT_FOUND");
   });
 });
 
-describe('PATCH /entries/:entryId', () => {
-  it('updates title and type', async () => {
+describe("PATCH /entries/:entryId", () => {
+  it("updates title and type", async () => {
     const w = await createWorld(app);
     const entry = await createEntry(app, w.id);
-    const res = await api(app, 'PATCH', `/entries/${entry.id}`, {
-      title: 'Renamed',
-      type: 'faction',
+    const res = await api(app, "PATCH", `/entries/${entry.id}`, {
+      title: "Renamed",
+      type: "faction",
     });
     expect(res.status).toBe(200);
-    expect(res.body.title).toBe('Renamed');
-    expect(res.body.type).toBe('faction');
+    expect(res.body.title).toBe("Renamed");
+    expect(res.body.type).toBe("faction");
   });
 });
 
-describe('PUT /entries/:entryId/tags', () => {
-  it('replaces the tag set and dedupes', async () => {
+describe("PUT /entries/:entryId/tags", () => {
+  it("replaces the tag set and dedupes", async () => {
     const w = await createWorld(app);
-    const entry = await createEntry(app, w.id, { tags: ['old'] });
-    const res = await api(app, 'PUT', `/entries/${entry.id}/tags`, {
-      tags: ['new', 'new', 'other'],
+    const entry = await createEntry(app, w.id, { tags: ["old"] });
+    const res = await api(app, "PUT", `/entries/${entry.id}/tags`, {
+      tags: ["new", "new", "other"],
     });
     expect(res.status).toBe(200);
-    expect([...res.body.tags].sort()).toEqual(['new', 'other']);
+    expect([...res.body.tags].sort()).toEqual(["new", "other"]);
 
-    const detail = await api(app, 'GET', `/entries/${entry.id}`);
-    expect([...detail.body.tags].sort()).toEqual(['new', 'other']);
+    const detail = await api(app, "GET", `/entries/${entry.id}`);
+    expect([...detail.body.tags].sort()).toEqual(["new", "other"]);
   });
 });
 
-describe('DELETE /entries/:entryId', () => {
-  it('deletes the entry and cascades to its sections', async () => {
+describe("DELETE /entries/:entryId", () => {
+  it("deletes the entry and cascades to its sections", async () => {
     const w = await createWorld(app);
     const entry = await createEntry(app, w.id);
     const section = await createSection(app, entry.id);
 
-    expect((await api(app, 'DELETE', `/entries/${entry.id}`)).status).toBe(204);
-    expect((await api(app, 'GET', `/entries/${entry.id}`)).status).toBe(404);
-    expect((await api(app, 'GET', `/sections/${section.id}`)).status).toBe(404);
+    expect((await api(app, "DELETE", `/entries/${entry.id}`)).status).toBe(204);
+    expect((await api(app, "GET", `/entries/${entry.id}`)).status).toBe(404);
+    expect((await api(app, "GET", `/sections/${section.id}`)).status).toBe(404);
   });
 });

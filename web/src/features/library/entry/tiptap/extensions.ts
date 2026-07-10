@@ -3,19 +3,26 @@
 // prose (code blocks, rules, strike) is disabled; image/file/embed extensions
 // are simply never installed.
 
-import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
-import { EntryLinkNode } from './EntryLinkNode';
-import { LinkSuggestion } from './LinkSuggestion';
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
+import { EntryLinkNode } from "./EntryLinkNode";
+import { LinkSuggestion } from "./LinkSuggestion";
+import { MathCommands, MathInlineNode } from "./MathExtensions";
 
 export function buildExtensions(placeholder: string) {
   return [
+    MathInlineNode,
+    MathCommands,
     StarterKit.configure({
       heading: { levels: [2, 3, 4] },
       codeBlock: false,
       horizontalRule: false,
       strike: false,
     }),
+    Subscript,
+    Superscript,
     Placeholder.configure({ placeholder }),
     EntryLinkNode,
     LinkSuggestion,

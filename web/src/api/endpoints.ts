@@ -1,6 +1,6 @@
 // Typed endpoint functions, one section per backend route module.
 
-import { del, get, patch, post, put } from './client';
+import { del, get, patch, post, put } from "./client";
 import type {
   ArtifactDetail,
   ArtifactWithUpload,
@@ -16,12 +16,12 @@ import type {
   World,
   WorkspaceStateDto,
   WorldTheme,
-} from './types';
+} from "./types";
 
 // ---- worlds ----
 
-export const listWorlds = () => get<Page<World>>('/worlds');
-export const createWorld = (name: string) => post<World>('/worlds', { name });
+export const listWorlds = () => get<Page<World>>("/worlds");
+export const createWorld = (name: string) => post<World>("/worlds", { name });
 export const renameWorld = (worldId: string, name: string) =>
   patch<World>(`/worlds/${worldId}`, { name });
 export const deleteWorld = (worldId: string) => del(`/worlds/${worldId}`);
@@ -36,7 +36,7 @@ export const createEntryType = (
 ) => post<EntryType>(`/worlds/${worldId}/entry-types`, body);
 export const patchEntryType = (
   id: string,
-  body: Partial<Pick<EntryType, 'name' | 'slug' | 'iconName' | 'iconWeight'>>
+  body: Partial<Pick<EntryType, "name" | "slug" | "iconName" | "iconWeight">>
 ) => patch<EntryType>(`/entry-types/${id}`, body);
 export const deleteEntryType = (id: string) => del(`/entry-types/${id}`);
 
@@ -55,21 +55,23 @@ export const createRelationType = (
 ) => post<RelationType>(`/worlds/${worldId}/relation-types`, body);
 export const patchRelationType = (
   id: string,
-  body: Partial<Pick<RelationType, 'name' | 'inverseName' | 'iconName' | 'iconWeight'>>
+  body: Partial<Pick<RelationType, "name" | "inverseName" | "iconName" | "iconWeight">>
 ) => patch<RelationType>(`/relation-types/${id}`, body);
 export const deleteRelationType = (id: string) => del(`/relation-types/${id}`);
 
 // ---- entries ----
 
-export const createEntry = (worldId: string, body: { type: string; title: string; tags?: string[] }) =>
-  post<EntrySummary>(`/worlds/${worldId}/entries`, body);
+export const createEntry = (
+  worldId: string,
+  body: { type: string; title: string; tags?: string[] }
+) => post<EntrySummary>(`/worlds/${worldId}/entries`, body);
 
 export async function listAllEntries(worldId: string): Promise<EntrySummary[]> {
   const items: EntrySummary[] = [];
   let cursor: string | null = null;
   do {
-    const qs = new URLSearchParams({ limit: '200' });
-    if (cursor) qs.set('cursor', cursor);
+    const qs = new URLSearchParams({ limit: "200" });
+    if (cursor) qs.set("cursor", cursor);
     const page: Page<EntrySummary> = await get(`/worlds/${worldId}/entries?${qs}`);
     items.push(...page.items);
     cursor = page.nextCursor;
@@ -86,17 +88,15 @@ export const deleteEntry = (entryId: string) => del(`/entries/${entryId}`);
 
 // ---- sections ----
 
-export const createSection = (entryId: string, label?: string | null) =>
-  post<Section & { entryId: string }>(`/entries/${entryId}/sections`, { label: label ?? null });
-export const patchSection = (
-  id: string,
-  body: { label?: string | null; contentJson?: PMNode; order?: number }
-) => patch<Section & { entryId: string }>(`/sections/${id}`, body);
+export const createSection = (entryId: string) =>
+  post<Section & { entryId: string }>(`/entries/${entryId}/sections`, {});
+export const patchSection = (id: string, body: { contentJson?: PMNode; order?: number }) =>
+  patch<Section & { entryId: string }>(`/sections/${id}`, body);
 export const deleteSection = (id: string) => del(`/sections/${id}`);
 
 // ---- artifacts (images / sketches) ----
 
-export type UploadKind = 'images' | 'sketches';
+export type UploadKind = "images" | "sketches";
 
 export const createArtifact = (
   kind: UploadKind,
@@ -127,8 +127,8 @@ export function uploadToPresigned(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('PUT', url);
-    xhr.setRequestHeader('Content-Type', contentType);
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", contentType);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
     };
@@ -136,7 +136,7 @@ export function uploadToPresigned(
       xhr.status >= 200 && xhr.status < 300
         ? resolve()
         : reject(new Error(`upload failed: ${xhr.status}`));
-    xhr.onerror = () => reject(new Error('upload failed: network error'));
+    xhr.onerror = () => reject(new Error("upload failed: network error"));
     xhr.send(body);
   });
 }
@@ -144,7 +144,7 @@ export function uploadToPresigned(
 // ---- relations ----
 
 export const createRelation = (body: { fromId: string; toId: string; typeId: string }) =>
-  post<RelationRow>('/relations', body);
+  post<RelationRow>("/relations", body);
 export const deleteRelation = (id: string) => del(`/relations/${id}`);
 
 // ---- search ----
@@ -158,17 +158,17 @@ export interface SearchParams {
 
 export function search(worldId: string, params: SearchParams): Promise<Page<SearchResult>> {
   const qs = new URLSearchParams();
-  if (params.q) qs.set('q', params.q);
-  if (params.type) qs.set('type', params.type);
-  for (const tag of params.tags ?? []) qs.append('tag', tag);
-  qs.set('limit', String(params.limit ?? 200));
+  if (params.q) qs.set("q", params.q);
+  if (params.type) qs.set("type", params.type);
+  for (const tag of params.tags ?? []) qs.append("tag", tag);
+  qs.set("limit", String(params.limit ?? 200));
   return get(`/worlds/${worldId}/search?${qs}`);
 }
 
 // ---- theme / workspace state ----
 
 export const getTheme = (worldId: string) => get<WorldTheme>(`/worlds/${worldId}/theme`);
-export const putTheme = (worldId: string, body: Partial<Omit<WorldTheme, 'worldId'>>) =>
+export const putTheme = (worldId: string, body: Partial<Omit<WorldTheme, "worldId">>) =>
   put<WorldTheme>(`/worlds/${worldId}/theme`, body);
 
 export const getWorkspaceState = (worldId: string) =>
