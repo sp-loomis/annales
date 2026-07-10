@@ -57,25 +57,55 @@ Content-Type: application/json
 
 { "name": "the ages" }
 
-### Create calendar (arithmetic)
+### Create calendar (2x30-day years; see docs/API.md appendix for the format)
 POST {{base}}/timelines/{{timelineId}}/calendars
 Content-Type: application/json
 
 {
   "name": "common reckoning",
-  "type": "arithmetic",
-  "definition": { "months": [ { "name": "Frostwane", "days": 30 }, { "name": "Sunreach", "days": 30 } ] }
+  "definition": {
+    "version": 1,
+    "params": [
+      { "name": "year", "type": "number", "range": { "from": null, "to": null } },
+      { "name": "month", "type": "named", "values": ["Frostwane", "Sunreach"] },
+      { "name": "day", "type": "number", "range": { "from": 1, "to": 30 }, "unitTicks": 1 }
+    ],
+    "epoch": { "year": 1, "month": "Frostwane", "day": 1 }
+  }
 }
 
-### Create calendar (ordinal, anchored + unanchored stages)
+### Create calendar (open-ended BC/AD eras, countdown BC years)
 POST {{base}}/timelines/{{timelineId}}/calendars
 Content-Type: application/json
 
 {
-  "name": "the ages",
-  "type": "ordinal",
-  "definition": { "stages": [ { "name": "First Age", "tickStart": 0, "tickEnd": 10000 }, { "name": "Age of Mist" } ] }
+  "name": "the long reckoning",
+  "definition": {
+    "version": 1,
+    "params": [
+      { "name": "era", "type": "named", "values": ["BC", "AD"] },
+      { "name": "year", "type": "number",
+        "range": { "from": { "dsl": "return case era when BC then null when AD then 1" },
+                   "to":   { "dsl": "return case era when BC then 1 when AD then null" } },
+        "step":  { "dsl": "return case era when BC then -1 when AD then 1" } },
+      { "name": "month", "type": "named", "values": ["Frostwane", "Sunreach"] },
+      { "name": "day", "type": "number", "range": { "from": 1, "to": 30 }, "unitTicks": 1 }
+    ],
+    "epoch": { "era": "AD", "year": 1, "month": "Frostwane", "day": 1 }
+  }
 }
+
+### Convert tick -> date (formats + derived fields)
+POST {{base}}/calendars/{{calendarId}}/convert
+Content-Type: application/json
+
+{ "tick": 60 }
+
+### Convert date -> ticks (prefixes widen to the whole unit)
+POST {{base}}/calendars/{{calendarId}}/convert
+Content-Type: application/json
+
+{ "date": { "year": 2 } }
 
 ### Create relation type
 POST {{base}}/worlds/{{worldId}}/relation-types
@@ -178,7 +208,7 @@ Content-Type: application/json
 POST {{base}}/entries/{{entryId}}/date-ranges
 Content-Type: application/json
 
-{ "calendarId": "{{calendarId}}", "rawComponents": { "year": 2, "month": 1, "day": 1 }, "precisionTier": "exact" }
+{ "calendarId": "{{calendarId}}", "rawComponents": { "year": 2, "month": "Frostwane", "day": 1 }, "precisionTier": "exact" }
 
 ### ---------- Relations ----------
 

@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 
-export type SourceType = 'document' | 'geometry' | 'sketch' | 'image';
+export type SourceType = 'section' | 'geometry' | 'sketch' | 'image';
 
 // tsv is an Unsupported column, so all SearchIndex writes go through raw SQL.
 

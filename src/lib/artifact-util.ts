@@ -1,6 +1,6 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 
-export type ArtifactKind = 'documents' | 'images' | 'sketches' | 'geometries';
+export type ArtifactKind = 'images' | 'sketches' | 'geometries';
 
 // 'failed' is derived, never stored: a pending row whose upload window has
 // passed. A fresh upload-url flips it back to pending.
@@ -30,13 +30,11 @@ export function filePathFor(
   imageContentType?: string
 ): string {
   const ext =
-    kind === 'documents'
-      ? '.md'
-      : kind === 'sketches'
-        ? '.excalidraw.json'
-        : kind === 'geometries'
-          ? '.geojson'
-          : IMAGE_EXT[imageContentType ?? ''] ?? '.bin';
+    kind === 'sketches'
+      ? '.excalidraw.json'
+      : kind === 'geometries'
+        ? '.geojson'
+        : IMAGE_EXT[imageContentType ?? ''] ?? '.bin';
   return `worlds/${worldId}/entries/${entryId}/${kind}/${artifactId}${ext}`;
 }
 

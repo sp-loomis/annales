@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { crossWorld, notFound, validation } from '../lib/errors.js';
-import { CalendarError, computeTicks } from '../lib/calendar.js';
+import { CalendarError, compileCalendar, dateToTicks, type Ticks } from '../lib/calendar/index.js';
 
 const PRECISION_TIERS = ['exact', 'circa', 'ordinal'];
 
@@ -10,15 +10,16 @@ function serialize(row: any) {
     entryId: row.entryId,
     calendarId: row.calendarId,
     rawComponents: row.rawComponents,
-    tickStart: row.tickStart,
-    tickEnd: row.tickEnd,
+    // BigInt columns: convert for JSON; safe-integer range enforced at write.
+    tickStart: row.tickStart === null ? null : Number(row.tickStart),
+    tickEnd: row.tickEnd === null ? null : Number(row.tickEnd),
     precisionTier: row.precisionTier,
   };
 }
 
-function ticksFor(calendar: { type: string; definition: unknown }, raw: Record<string, unknown>) {
+function ticksFor(definition: unknown, raw: Record<string, unknown>): Ticks {
   try {
-    return computeTicks(calendar, raw);
+    return dateToTicks(compileCalendar(definition), raw);
   } catch (err) {
     if (err instanceof CalendarError) throw validation(err.message);
     throw err;
@@ -56,7 +57,7 @@ export function dateRangeRoutes(app: FastifyInstance): void {
         throw crossWorld('calendar belongs to a different world than the entry');
       }
 
-      const ticks = ticksFor(calendar, req.body.rawComponents);
+      const ticks = ticksFor(calendar.definition, req.body.rawComponents);
       const row = await app.prisma.dateRange.create({
         data: {
           entryId: entry.id,
@@ -111,7 +112,7 @@ export function dateRangeRoutes(app: FastifyInstance): void {
 
       const rawComponents =
         req.body.rawComponents ?? (existing.rawComponents as Record<string, unknown>);
-      const ticks = ticksFor(calendar, rawComponents);
+      const ticks = ticksFor(calendar.definition, rawComponents);
       const row = await app.prisma.dateRange.update({
         where: { id: existing.id },
         data: {

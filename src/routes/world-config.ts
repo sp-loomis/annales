@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { conflict, inUse, notFound, validation } from '../lib/errors.js';
-import { CalendarError, validateCalendarDefinition } from '../lib/calendar.js';
+import { CalendarError, compileCalendar, dateToTicks } from '../lib/calendar/index.js';
 
 // Config resources come in two shapes:
 //   - world-scoped: globes, timelines, relation types — mounted under
@@ -30,6 +30,12 @@ interface ConfigResource {
   buildData: (body: any) => Record<string, unknown>;
   serialize: (row: any) => Record<string, unknown>;
   inUseCount: (app: FastifyInstance, id: string) => Promise<number>;
+  /** Optional PATCH override for resources whose update has side effects. */
+  applyPatch?: (
+    app: FastifyInstance,
+    existing: any,
+    data: Record<string, unknown>
+  ) => Promise<any>;
 }
 
 function isUniqueViolation(err: unknown): boolean {
@@ -98,18 +104,16 @@ const RESOURCES: ConfigResource[] = [
     delegate: (app) => app.prisma.calendar,
     bodySchema: (partial) => ({
       type: 'object',
-      ...(partial ? {} : { required: ['name', 'type', 'definition'] }),
+      ...(partial ? {} : { required: ['name', 'definition'] }),
       properties: {
         name: { type: 'string', minLength: 1 },
-        type: { type: 'string', minLength: 1 },
         definition: { type: 'object' },
       },
     }),
     buildData: (body) => {
-      if (body.type !== undefined || body.definition !== undefined) {
-        // type/definition always validated together
+      if (body.definition !== undefined) {
         try {
-          validateCalendarDefinition(body.type, body.definition);
+          compileCalendar(body.definition);
         } catch (err) {
           if (err instanceof CalendarError) throw validation(err.message);
           throw err;
@@ -117,7 +121,6 @@ const RESOURCES: ConfigResource[] = [
       }
       return {
         ...(body.name !== undefined ? { name: body.name } : {}),
-        ...(body.type !== undefined ? { type: body.type } : {}),
         ...(body.definition !== undefined ? { definition: body.definition } : {}),
       };
     },
@@ -125,10 +128,41 @@ const RESOURCES: ConfigResource[] = [
       id: row.id,
       timelineId: row.timelineId,
       name: row.name,
-      type: row.type,
       definition: row.definition,
     }),
     inUseCount: (app, id) => app.prisma.dateRange.count({ where: { calendarId: id } }),
+    // Ticks are load-bearing (search): a definition change recomputes every
+    // dependent DateRange atomically, or fails the whole PATCH naming the
+    // ranges whose rawComponents no longer fit.
+    applyPatch: async (app, existing, data) => {
+      if (data.definition === undefined) {
+        return app.prisma.calendar.update({ where: { id: existing.id }, data });
+      }
+      const compiled = compileCalendar(data.definition); // buildData already validated
+      return app.prisma.$transaction(async (tx) => {
+        const row = await tx.calendar.update({ where: { id: existing.id }, data });
+        const ranges = await tx.dateRange.findMany({ where: { calendarId: existing.id } });
+        const failures: string[] = [];
+        for (const range of ranges) {
+          try {
+            const ticks = dateToTicks(compiled, range.rawComponents as Record<string, unknown>);
+            await tx.dateRange.update({
+              where: { id: range.id },
+              data: { tickStart: ticks.tickStart, tickEnd: ticks.tickEnd },
+            });
+          } catch (err) {
+            if (err instanceof CalendarError) failures.push(`${range.id}: ${err.message}`);
+            else throw err;
+          }
+        }
+        if (failures.length > 0) {
+          throw validation(
+            `definition change invalidates ${failures.length} date range(s) — ${failures.join('; ')}`
+          );
+        }
+        return row;
+      });
+    },
   },
   {
     collection: 'relation-types',
@@ -141,17 +175,23 @@ const RESOURCES: ConfigResource[] = [
       properties: {
         name: { type: 'string', minLength: 1 },
         inverseName: { type: ['string', 'null'] },
+        iconName: { type: ['string', 'null'] },
+        iconWeight: { type: ['string', 'null'] },
       },
     }),
     buildData: (body) => ({
       ...(body.name !== undefined ? { name: body.name } : {}),
       ...(body.inverseName !== undefined ? { inverseName: body.inverseName } : {}),
+      ...(body.iconName !== undefined ? { iconName: body.iconName } : {}),
+      ...(body.iconWeight !== undefined ? { iconWeight: body.iconWeight } : {}),
     }),
     serialize: (row) => ({
       id: row.id,
       worldId: row.worldId,
       name: row.name,
       inverseName: row.inverseName,
+      iconName: row.iconName,
+      iconWeight: row.iconWeight,
     }),
     inUseCount: (app, id) => app.prisma.relation.count({ where: { typeId: id } }),
   },
@@ -212,15 +252,11 @@ function register(app: FastifyInstance, res: ConfigResource): void {
       const body = req.body as Record<string, any>;
       const existing = await res.delegate(app).findUnique({ where: { id: req.params.id } });
       if (!existing) throw notFound(res.noun, req.params.id);
-      // calendars: type/definition must stay coherent — validate the merged row
-      const merged = { ...existing, ...body };
-      const data = res.buildData(
-        res.collection === 'calendars'
-          ? { ...body, type: merged.type, definition: merged.definition }
-          : body
-      );
+      const data = res.buildData(body);
       try {
-        const row = await res.delegate(app).update({ where: { id: existing.id }, data });
+        const row = res.applyPatch
+          ? await res.applyPatch(app, existing, data)
+          : await res.delegate(app).update({ where: { id: existing.id }, data });
         return res.serialize(row);
       } catch (err) {
         if (isUniqueViolation(err)) {

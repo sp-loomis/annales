@@ -12,6 +12,7 @@ import {
   createCrs,
   createCalendar,
   readyArtifact,
+  readySection,
 } from '../helpers.js';
 import { rectFeature, triangleFeature, excalidrawScene } from '../fixtures.js';
 
@@ -26,10 +27,10 @@ beforeEach(resetDb);
 
 // Equirectangular globe (radius 180/π): x = lng, y = -lat. Authored rects
 // below list their canonical bboxes in comments.
-//   coast    — region, tag 'coastal', body doc "shattered", rect [0..10]
+//   coast    — location, tag 'coastal', body section "shattered", rect [0..10]
 //              (canonical [0,-10,10,0]), date range ticks 60..61
-//   falls    — place, sketch "waterfall cavern", date range 6000..6060
-//   farAway  — place, rect [50..60] (canonical [50,-60,60,-50])
+//   falls    — character, sketch "waterfall cavern", date range 6000..6060
+//   farAway  — character, rect [50..60] (canonical [50,-60,60,-50])
 async function seed() {
   const w = await createWorld(app);
   const globe = await createGlobe(app, w.id);
@@ -38,18 +39,11 @@ async function seed() {
   const calendar = await createCalendar(app, timeline.id); // 60-day years, see helpers
 
   const coast = await createEntry(app, w.id, {
-    type: 'region',
+    type: 'location',
     title: 'The Shattered Coast',
     tags: ['coastal'],
   });
-  await readyArtifact(
-    app,
-    coast.id,
-    'documents',
-    { role: 'body' },
-    'The shattered coast lies west of the old kingdom.',
-    'text/markdown'
-  );
+  await readySection(app, coast.id, 'The shattered coast lies west of the old kingdom.');
   await readyArtifact(
     app,
     coast.id,
@@ -60,11 +54,11 @@ async function seed() {
   );
   await api(app, 'POST', `/entries/${coast.id}/date-ranges`, {
     calendarId: calendar.id,
-    rawComponents: { year: 2, month: 1, day: 1 }, // ticks 60..61
+    rawComponents: { year: 2, month: 'Frostwane', day: 1 }, // ticks 60..61
     precisionTier: 'exact',
   });
 
-  const falls = await createEntry(app, w.id, { type: 'place', title: 'The Falls' });
+  const falls = await createEntry(app, w.id, { type: 'character', title: 'The Falls' });
   await readyArtifact(
     app,
     falls.id,
@@ -79,7 +73,7 @@ async function seed() {
     precisionTier: 'circa',
   });
 
-  const farAway = await createEntry(app, w.id, { type: 'place', title: 'Far Away' });
+  const farAway = await createEntry(app, w.id, { type: 'character', title: 'Far Away' });
   await readyArtifact(
     app,
     farAway.id,
@@ -123,7 +117,7 @@ describe('GET /worlds/:worldId/search — guards', () => {
 });
 
 describe('full-text (q)', () => {
-  it('finds document text with ranked, snippeted matches', async () => {
+  it('finds section text with ranked, snippeted matches', async () => {
     const { worldId, coast } = await seed();
     const res = await api(app, 'GET', `/worlds/${worldId}/search?q=shattered`);
     expect(res.status).toBe(200);
@@ -132,7 +126,7 @@ describe('full-text (q)', () => {
     expect(hit.entryId).toBe(coast.id);
     expect(hit.title).toBe('The Shattered Coast');
     expect(typeof hit.rank).toBe('number');
-    expect(hit.matches[0].sourceType).toBe('document');
+    expect(hit.matches[0].sourceType).toBe('section');
     expect(hit.matches[0].snippet).toContain('<b>');
   });
 
@@ -150,10 +144,11 @@ describe('full-text (q)', () => {
     expect(res.body.items[0].matches[0].sourceType).toBe('geometry');
   });
 
-  it('does not surface un-finalized uploads', async () => {
+  it('does not surface a section whose content has not been written', async () => {
     const { worldId, coast } = await seed();
-    const created = await api(app, 'POST', `/entries/${coast.id}/documents`, { role: 'note' });
-    await uploadTo(created.body.upload.url, 'zanzibar secrets', 'text/markdown');
+    // A section only enters the index when contentJson is PATCHed in. A bare
+    // section (no content yet) contributes nothing to full-text search.
+    await api(app, 'POST', `/entries/${coast.id}/sections`, { label: 'zanzibar secrets' });
 
     const res = await api(app, 'GET', `/worlds/${worldId}/search?q=zanzibar`);
     expect(res.body.items).toEqual([]);
@@ -164,7 +159,7 @@ describe('metadata filters', () => {
   it('filters by type and tag, composing with q', async () => {
     const { worldId, coast } = await seed();
 
-    const byType = await api(app, 'GET', `/worlds/${worldId}/search?type=region`);
+    const byType = await api(app, 'GET', `/worlds/${worldId}/search?type=location`);
     expect(byType.body.items.map((i: any) => i.entryId)).toEqual([coast.id]);
 
     const byTag = await api(app, 'GET', `/worlds/${worldId}/search?tag=coastal`);
@@ -173,11 +168,11 @@ describe('metadata filters', () => {
     const composed = await api(
       app,
       'GET',
-      `/worlds/${worldId}/search?q=shattered&tag=coastal&type=region`
+      `/worlds/${worldId}/search?q=shattered&tag=coastal&type=location`
     );
     expect(composed.body.items).toHaveLength(1);
 
-    const excluded = await api(app, 'GET', `/worlds/${worldId}/search?q=shattered&type=place`);
+    const excluded = await api(app, 'GET', `/worlds/${worldId}/search?q=shattered&type=character`);
     expect(excluded.body.items).toEqual([]);
   });
 });

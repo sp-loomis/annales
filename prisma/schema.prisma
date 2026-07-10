@@ -8,12 +8,30 @@ datasource db {
 }
 
 model World {
-  id            String         @id @default(uuid())
-  name          String
-  entries       Entry[]
-  globes        Globe[]
-  timelines     Timeline[]
-  relationTypes RelationType[]
+  id             String          @id @default(uuid())
+  name           String
+  entries        Entry[]
+  entryTypes     EntryType[]
+  globes         Globe[]
+  timelines      Timeline[]
+  relationTypes  RelationType[]
+  theme          WorldTheme?
+  workspaceState WorkspaceState?
+}
+
+// Per-world registry of entry types. Entry.typeId references this; the slug
+// (not the uuid) is what API responses expose. Defaults seeded on world create.
+model EntryType {
+  id         String  @id @default(uuid())
+  worldId    String
+  name       String // display label e.g. "Character"
+  slug       String // API/storage value e.g. "character"
+  iconName   String? // Phosphor icon identifier e.g. "User"
+  iconWeight String? // "thin"|"light"|"regular"|"bold"|"fill"|"duotone"
+  world      World   @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  entries    Entry[]
+
+  @@unique([worldId, slug])
 }
 
 // A sphere grouping CRSs (its projections). Geometry bboxes canonicalize to
@@ -44,15 +62,16 @@ model Timeline {
 
 model Entry {
   id        String   @id @default(uuid())
-  type      String
+  typeId    String
   title     String
   worldId   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   world         World      @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  type          EntryType  @relation(fields: [typeId], references: [id], onDelete: Restrict)
   tags          EntryTag[]
-  documents     Document[]
+  sections      Section[]
   images        Image[]
   sketches      Sketch[]
   geometries    Geometry[]
@@ -60,7 +79,7 @@ model Entry {
   relationsFrom Relation[] @relation("RelationFrom")
   relationsTo   Relation[] @relation("RelationTo")
 
-  @@index([worldId, type])
+  @@index([worldId, typeId])
 }
 
 model EntryTag {
@@ -72,20 +91,20 @@ model EntryTag {
   @@index([tag])
 }
 
-// File-backed artifacts (Document/Image/Sketch/Geometry) share the presigned
-// upload lifecycle: status 'pending' at create, 'ready' after finalize.
-// 'failed' is never stored — derived at read time from uploadExpiresAt.
-model Document {
-  id              String    @id @default(uuid())
-  entryId         String
-  role            String
-  label           String?
-  filePath        String    @unique
-  status          String    @default("pending")
-  uploadExpiresAt DateTime?
-  entry           Entry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+// Rich-text sections hold ProseMirror JSON directly in the DB (no S3 file, no
+// upload lifecycle). Plain text is extracted into SearchIndex on write.
+model Section {
+  id          String @id @default(uuid())
+  entryId     String
+  label       String?
+  contentJson Json?
+  order       Float
+  entry       Entry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
 }
 
+// File-backed artifacts (Image/Sketch/Geometry) share the presigned upload
+// lifecycle: status 'pending' at create, 'ready' after finalize. 'failed' is
+// never stored — derived at read time from uploadExpiresAt.
 model Image {
   id              String    @id @default(uuid())
   entryId         String
@@ -94,6 +113,7 @@ model Image {
   filePath        String    @unique
   status          String    @default("pending")
   uploadExpiresAt DateTime?
+  order           Float
   entry           Entry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
 }
 
@@ -104,6 +124,7 @@ model Sketch {
   filePath        String    @unique
   status          String    @default("pending")
   uploadExpiresAt DateTime?
+  order           Float
   entry           Entry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
 }
 
@@ -116,6 +137,7 @@ model Geometry {
   properties      Json?
   status          String        @default("pending")
   uploadExpiresAt DateTime?
+  order           Float
   entry           Entry         @relation(fields: [entryId], references: [id], onDelete: Cascade)
   crs             CrsDefinition @relation(fields: [crsId], references: [id], onDelete: Restrict)
   // Canonical lng/lat bbox(es), derived at finalize; empty while pending. 1 box
@@ -150,8 +172,8 @@ model DateRange {
   entryId       String
   calendarId    String
   rawComponents Json
-  tickStart     Float?
-  tickEnd       Float?
+  tickStart     BigInt?
+  tickEnd       BigInt?
   precisionTier String
   entry         Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
   calendar      Calendar @relation(fields: [calendarId], references: [id], onDelete: Restrict)
@@ -164,7 +186,6 @@ model Calendar {
   id         String      @id @default(uuid())
   timelineId String
   name       String
-  type       String
   definition Json
   timeline   Timeline    @relation(fields: [timelineId], references: [id], onDelete: Cascade)
   dateRanges DateRange[]
@@ -177,6 +198,8 @@ model RelationType {
   worldId     String
   name        String
   inverseName String?
+  iconName    String?
+  iconWeight  String?
   world       World      @relation(fields: [worldId], references: [id], onDelete: Cascade)
   relations   Relation[]
 
@@ -210,4 +233,24 @@ model SearchIndex {
 
   @@unique([sourceType, sourceId])
   @@index([entryId])
+}
+
+// UI persistence — one row per world, keyed by worldId. GET returns column
+// defaults when absent (never 404); PUT upserts.
+model WorldTheme {
+  worldId           String  @id
+  fontFamily        String?
+  accentColor       String?
+  surfaceColor      String?
+  darkMode          Boolean @default(true)
+  defaultIconWeight String  @default("duotone")
+  world             World   @relation(fields: [worldId], references: [id], onDelete: Cascade)
+}
+
+model WorkspaceState {
+  worldId      String   @id
+  openEntryIds String[]
+  sidebarState Json?
+  updatedAt    DateTime @updatedAt
+  world        World    @relation(fields: [worldId], references: [id], onDelete: Cascade)
 }

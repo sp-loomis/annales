@@ -43,7 +43,11 @@ src/
   lib/
     errors.ts            AppError + helpers (notFound, conflict, crossWorld, …)
     storage.ts           S3 wrapper: presign PUT/GET, head/get/put/bulk-delete bytes
-    calendar.ts          tick conversion engine (arithmetic + ordinal)
+    dsl/                 calendar rule DSL: lexer, Pratt parser, typechecker +
+                         dependency scan, evaluator (see docs/sketch/calendar-dsl.md)
+    calendar/            calendar engine: definition compiler + static checks,
+                         tick-order/Null-legality scans, period detection,
+                         tick↔date conversion, formatting + derived fields
     payloads.ts          semantic validation of uploads: GeoJSON, Excalidraw,
                          image magic bytes
     geo.ts               d3-geo canonicalization: invert authored coords to the
@@ -59,6 +63,7 @@ src/
     world-config.ts      one CRUD factory, two scopes: world-scoped (globes,
                          timelines, relation types) and parent-scoped (CRS under
                          a globe, calendars under a timeline)
+    calendars.ts         POST /calendars/:id/convert (tick↔date + formatting)
     date-ranges.ts       date-range CRUD; delegates tick math to lib/calendar
     relations.ts         relation CRUD + graph traversal (recursive CTE)
     search.ts            two-stage search (see below)
@@ -66,7 +71,8 @@ tests/
   global-setup.ts        migrate test DB, create + version the test bucket
   helpers.ts             app factory, DB reset, API-level builders, upload helpers
   fixtures.ts            tiny PNG, GeoJSON builders, Excalidraw scene builder
-  contract/              105 contract tests, one file per resource area
+  contract/              contract tests, one file per resource area
+  unit/                  pure-logic unit tests (calendar DSL + engine) — no DB
 scripts/demo.sh          end-to-end guided tour against a running server
 requests.http            every endpoint as a REST-client scratchpad
 ```
@@ -165,19 +171,40 @@ Stage 2 only ever touches candidates:
 
 Stage 1 is never bypassed — turf and ranking never see a full table.
 
-## Calendar engine (`src/lib/calendar.ts`)
+## Calendar engine (`src/lib/calendar/`, `src/lib/dsl/`)
 
-Pure functions, no I/O. `validateCalendarDefinition` gates calendar writes;
-`computeTicks` converts as-authored `rawComponents` to the timeline's tick line at
-date-range write time (both stored — conversion is never lossy). Semantics
-are pinned in the [API.md appendix](API.md#appendix-calendar-definitions--tick-semantics),
-and the contract tests assert exact tick numbers.
+Pure functions, no I/O; the authoritative spec is `docs/sketch/calendar-schema.md`
+and `docs/sketch/calendar-dsl.md`, with the API-visible contract pinned in the
+[API.md appendix](API.md#appendix-calendar-definitions--tick-semantics).
+
+- `lib/dsl/` — the rule language: lexer (string templates lex their
+  interpolations recursively), Pratt parser, typechecker (SSA locals, `case`
+  exhaustiveness against declared Named domains, the Null carve-out), and
+  evaluator (real-valued arithmetic with Euclidean `%`). The typechecker also
+  emits a per-rule **dependency scan** — which ancestors a rule references,
+  and whether every reference is `param % literal`.
+- `lib/calendar/` — the engine. `compileCalendar` runs every static check at
+  save time (scope gating, step ±1 in every branch, Null legality's three
+  conditions with a step-derived tick-order extremality scan, epoch
+  validation). Conversion runs over the **tick-order index**; `step` is a
+  display-only label map, so countdown and alternating-step params need no
+  special handling. The dependency scans feed **period detection**: widths
+  with no ancestor deps are constant (Tier 0), mod-pattern deps are provably
+  periodic with period lcm(moduli) and convert in closed form (Tier 1),
+  anything else is summed on demand (Tier 2). No caching — closed forms are
+  recomputed per query (spec §2); every accumulation is safe-integer-guarded.
+
+Routes import only `lib/calendar/index.js` and map thrown `CalendarError`s to
+400 `VALIDATION`. Calendars are compiled from their stored JSON per request.
 
 ## Testing approach
 
-Contract tests only — they exercise the HTTP surface with a real Postgres
-and a real (LocalStack) S3, including real presigned PUT/GET round trips
-over HTTP. No mocks anywhere.
+Contract tests exercise the HTTP surface with a real Postgres and a real
+(LocalStack) S3, including real presigned PUT/GET round trips over HTTP. No
+mocks anywhere. Pure logic (the calendar DSL and engine) is additionally
+unit-tested in `tests/unit/` — no DB or S3, shared fixtures in
+`tests/unit/calendar/fixtures.ts` (a leap-rule Gregorian and an open-ended
+BC/AD calendar) that the contract tests reuse.
 
 - Setup goes **through the API** (`tests/helpers.ts` builders), never the DB,
   so tests keep working across schema refactors.

@@ -13,12 +13,13 @@ import {
 } from '../helpers.js';
 import { PNG_1X1, rectFeature, excalidrawScene } from '../fixtures.js';
 
-// The presigned-upload lifecycle is one contract shared by all four
-// file-backed artifact kinds: create (pending) → upload → finalize (ready).
-// Kind-specific validation/derivation lives in the per-kind test files.
+// The presigned-upload lifecycle is one contract shared by the file-backed
+// artifact kinds: create (pending) → upload → finalize (ready). Kind-specific
+// validation/derivation lives in the per-kind test files. (Sections are not
+// file-backed — they have their own DB-only lifecycle in sections.test.ts.)
 
 interface KindCase {
-  kind: 'documents' | 'images' | 'sketches' | 'geometries';
+  kind: 'images' | 'sketches' | 'geometries';
   // createBody may need world context (geometry needs a crsId)
   createBody: (ctx: { crsId: string }) => Record<string, unknown>;
   payload: () => string | Uint8Array;
@@ -26,12 +27,6 @@ interface KindCase {
 }
 
 const KINDS: KindCase[] = [
-  {
-    kind: 'documents',
-    createBody: () => ({ role: 'body', label: 'main text' }),
-    payload: () => '# The Shattered Coast\n\nSalt and ruin.',
-    contentType: 'text/markdown',
-  },
   {
     kind: 'images',
     createBody: () => ({ label: 'banner', contentType: 'image/png' }),
@@ -166,20 +161,22 @@ describe.each(KINDS)('$kind lifecycle', ({ kind, createBody, payload, contentTyp
 });
 
 describe('content replacement', () => {
-  it('upload-url on a ready document + re-finalize serves the new content', async () => {
+  it('upload-url on a ready artifact + re-finalize serves the new content', async () => {
     const ctx = await makeEntryCtx();
-    const created = await api(app, 'POST', `/entries/${ctx.entryId}/documents`, { role: 'body' });
-    await uploadTo(created.body.upload.url, 'first draft', 'text/markdown');
-    await api(app, 'POST', `/documents/${created.body.id}/finalize`);
+    const first = JSON.stringify(excalidrawScene(['first draft']));
+    const second = JSON.stringify(excalidrawScene(['second draft']));
+    const created = await api(app, 'POST', `/entries/${ctx.entryId}/sketches`, {});
+    await uploadTo(created.body.upload.url, first, 'application/json');
+    await api(app, 'POST', `/sketches/${created.body.id}/finalize`);
 
-    const slot = await api(app, 'POST', `/documents/${created.body.id}/upload-url`);
+    const slot = await api(app, 'POST', `/sketches/${created.body.id}/upload-url`);
     expect(slot.status).toBe(200);
-    await uploadTo(slot.body.upload.url, 'second draft', 'text/markdown');
-    const fin = await api(app, 'POST', `/documents/${created.body.id}/finalize`);
+    await uploadTo(slot.body.upload.url, second, 'application/json');
+    const fin = await api(app, 'POST', `/sketches/${created.body.id}/finalize`);
     expect(fin.status).toBe(200);
 
-    const got = await api(app, 'GET', `/documents/${created.body.id}`);
+    const got = await api(app, 'GET', `/sketches/${created.body.id}`);
     const bytes = await downloadFrom(got.body.download.url);
-    expect(bytes.toString()).toBe('second draft');
+    expect(bytes.toString()).toBe(second);
   });
 });

@@ -57,22 +57,6 @@ const label = { label: { type: ['string', 'null'] } };
 
 const KINDS: KindConfig[] = [
   {
-    kind: 'documents',
-    sourceType: 'document',
-    delegate: (app) => app.prisma.document,
-    createSchema: {
-      type: 'object',
-      required: ['role'],
-      properties: { role: { type: 'string', minLength: 1 }, ...label },
-    },
-    prepareCreate: async (_app, _entry, body) => ({ role: body.role, label: body.label ?? null }),
-    finalize: async (_app, row, bytes) => {
-      const text = bytes.toString('utf8');
-      return { patch: {}, texts: [text, row.label] };
-    },
-    fields: async (_app, row) => ({ role: row.role }),
-  },
-  {
     kind: 'images',
     sourceType: 'image',
     delegate: (app) => app.prisma.image,
@@ -176,6 +160,7 @@ async function serialize(app: FastifyInstance, cfg: KindConfig, row: any) {
     id: row.id,
     entryId: row.entryId,
     label: row.label ?? null,
+    order: row.order,
     status,
     ...(await cfg.fields(app, row)),
     download:
@@ -217,8 +202,13 @@ function registerKind(app: FastifyInstance, cfg: KindConfig): void {
         (extra as { contentType?: string }).contentType
       );
       const uploadExpiresAt = new Date(Date.now() + app.appConfig.uploadTtlSeconds * 1000);
+      const last = await cfg.delegate(app).findFirst({
+        where: { entryId: entry.id },
+        orderBy: { order: 'desc' },
+      });
+      const order = (last?.order ?? 0) + 1;
       const row = await cfg.delegate(app).create({
-        data: { id, entryId: entry.id, filePath, status: 'pending', uploadExpiresAt, ...extra },
+        data: { id, entryId: entry.id, filePath, status: 'pending', uploadExpiresAt, order, ...extra },
       });
       return reply
         .code(201)
@@ -267,6 +257,32 @@ function registerKind(app: FastifyInstance, cfg: KindConfig): void {
     if (!row) throw notFound(kind, req.params.id);
     return serialize(app, cfg, row);
   });
+
+  // Metadata-only patch (label, order). Content changes go through the upload
+  // lifecycle, not here.
+  app.patch<{ Params: { id: string }; Body: { label?: string | null; order?: number } }>(
+    `/${kind}/:id`,
+    {
+      schema: {
+        body: {
+          type: 'object',
+          properties: { label: { type: ['string', 'null'] }, order: { type: 'number' } },
+        },
+      },
+    },
+    async (req) => {
+      const existing = await cfg.delegate(app).findUnique({ where: { id: req.params.id } });
+      if (!existing) throw notFound(kind, req.params.id);
+      const row = await cfg.delegate(app).update({
+        where: { id: existing.id },
+        data: {
+          ...(req.body.label !== undefined ? { label: req.body.label } : {}),
+          ...(req.body.order !== undefined ? { order: req.body.order } : {}),
+        },
+      });
+      return serialize(app, cfg, row);
+    }
+  );
 
   app.delete<{ Params: { id: string } }>(`/${kind}/:id`, async (req, reply) => {
     const row = await cfg.delegate(app).findUnique({ where: { id: req.params.id } });

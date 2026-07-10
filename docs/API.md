@@ -61,7 +61,7 @@ DELETE cascades: entries, artifacts (rows + stored objects), relations, globes (
   "geometries": [ { "id": "…", "crsId": "…", "label": "territory", "status": "ready",
                     "bboxes": [ [minLng, minLat, maxLng, maxLat] ], "properties": {} } ],
   "dateRanges": [ { "id": "…", "calendarId": "…", "rawComponents": {},
-                    "tickStart": 1042.0, "tickEnd": 1043.5, "precisionTier": "exact" } ]
+                    "tickStart": 1042, "tickEnd": 1043, "precisionTier": "exact" } ]
 }
 ```
 
@@ -118,9 +118,11 @@ it reports `pending` again. Search/index only ever sees `ready`.
 | DELETE | `/date-ranges/:id` | — | 204 | 404 |
 
 Server computes `tickStart`/`tickEnd` from `rawComponents` + the calendar's
-`definition` at write time. 400 `VALIDATION` if `rawComponents` don't fit the
-calendar (month 14 in a 12-month arithmetic calendar, unknown stage label in
-an ordinal one). Unanchored ordinal → ticks null, `precisionTier: "ordinal"`.
+`definition` at write time. `rawComponents` is a **contiguous prefix** of the
+calendar's parameter hierarchy (see appendix); 400 `VALIDATION` if a value is
+outside its domain, a level is skipped, or a value has the wrong JSON type.
+`tickStart`/`tickEnd` are integers; a side is `null` only when the denoted
+unit is unbounded in that direction (an open-ended era).
 
 ## Relation types (per-world, user-defined edge vocabulary)
 
@@ -173,8 +175,43 @@ parent's world. Name is unique **per globe** (CRS) / **per timeline** (calendar)
 | DELETE | `/crs/:id` | — | 204 | 404, 409 `IN_USE` if geometries reference it |
 
 Calendars identical at `/timelines/:timelineId/calendars` + `/calendars/:id`,
-body `{name, type, definition}`, serialized `{id, timelineId, name, type,
-definition}`, DELETE 409 `IN_USE` if date-ranges reference it.
+body `{name, definition}`, serialized `{id, timelineId, name, definition}`,
+DELETE 409 `IN_USE` if date-ranges reference it. The `definition` is compiled
+and statically checked at save time (see appendix) — 400 `VALIDATION` with a
+message naming the offending attachment point otherwise.
+
+**PATCHing a `definition` recomputes the ticks of every dependent date range
+in one transaction.** If any range's stored `rawComponents` no longer fit the
+new definition, the whole PATCH fails 400 `VALIDATION`, naming the offending
+date-range ids; nothing changes.
+
+### Conversion
+
+```
+POST /calendars/:id/convert
+Body: { "tick": 12345 }  XOR  { "date": { "era": "AD", "year": 2 } }
+```
+
+200 (both directions return the same shape):
+
+```json
+{
+  "date": { "era": "AD", "year": 2, "month": "Frostwane", "day": 1 },
+  "tickStart": 60, "tickEnd": 61,
+  "pretty": "AD 2 Frostwane 1",
+  "short": "2/2/1/1",
+  "derived": { "weekday": "Monday" }
+}
+```
+
+- `tick` → the full date tuple containing that tick, plus its one-unit interval.
+- `date` (a contiguous prefix) → its `[tickStart, tickEnd)` interval; open
+  sides are `null`.
+- `pretty`/`short` render at the deepest bound level.
+- `derived` (the calendar's derived fields) is present only for full tuples.
+- Errors: 404 unknown calendar; 400 `VALIDATION` for both/neither of
+  `tick`/`date`, a non-integer tick, a tick outside a bounded calendar's
+  range, an invalid prefix, or a rule that is undefined at the queried point.
 
 ## Search
 
@@ -185,7 +222,7 @@ GET /worlds/:worldId/search
     &tag=            repeatable, AND semantics
     &bbox=minLng,minLat,maxLng,maxLat   canonical lng/lat; geometry bbox overlap over the globe (stage 1) — with &exact=true, turf.js intersection pass (stage 2)
     &globeId=        required when bbox given — scopes the bbox search to one globe (compares all its CRSs in canonical frame)
-    &tickStart=&tickEnd=        date-range overlap
+    &tickStart=&tickEnd=        date-range overlap (integers)
     &timelineId=     required when tickStart/tickEnd given — scopes the date search to one timeline
     &limit=&cursor=
 ```
@@ -213,27 +250,106 @@ Rank present only when `q` given; otherwise items ordered by `updatedAt` desc.
 
 ## Appendix: calendar definitions & tick semantics
 
-A **tick** is a fractional day count since the timeline's epoch (tick 0). All
-calendars in a **timeline** convert into that timeline's shared tick line —
-that's what makes cross-calendar date-range overlap queries meaningful (and why
-tick search is scoped by `timelineId`). Calendars in different timelines are not
-comparable.
+The authoritative design lives in `docs/sketch/calendar-schema.md` (schema +
+engine) and `docs/sketch/calendar-dsl.md` (the rule DSL). This appendix pins
+the API-visible contract.
 
-**`arithmetic`** — `definition: { months: [{ name, days }, …] }`. Year length
-= sum of month days. Year/month/day are 1-based; year 1 day 1 = tick 0. No
-leap rules in v1 (a `table` calendar covers irregular years later).
-`rawComponents: { year, month?, day? }` — omitted units widen the range to
-the coarsest given unit:
+### Ticks
 
-- `{year: 2, month: 1, day: 1}` in a `[30, 30]`-day calendar → `tickStart: 60, tickEnd: 61`
-- `{year: 2}` → `tickStart: 60, tickEnd: 120` (whole year)
+A **tick** is a signed **integer** with no intrinsic duration — the timeline's
+shared coordinate. All calendars in a **timeline** convert into that
+timeline's tick line, which is what makes cross-calendar date-range overlap
+queries meaningful (and why tick search is scoped by `timelineId`).
+Granularity is user-managed: whatever a calendar's finest unit maps onto ticks
+defines its resolution. Tick arithmetic is exact; values must stay within
+±2^53 − 1 (400 `VALIDATION` beyond).
 
-**`ordinal`** — `definition: { stages: [{ name, tickStart?, tickEnd? }, …] }`.
-`rawComponents: { stage }` (must name a defined stage — else 400). Anchored
-stages copy their ticks; unanchored stages → `tickStart/tickEnd: null`.
+### Definition format (`version: 1`)
 
-**`table`** — reserved for v1; creating a calendar with `type: "table"` is
-400 `VALIDATION`.
+```jsonc
+{
+  "version": 1,
+  "params": [ /* ordered, coarsest → finest */ ],
+  "epoch": { "year": 1, "month": "Frostwane", "day": 1 },  // full tuple = tick 0
+  "derivedFields": [ /* optional */ ],
+  "format": { "pretty": { /* per-param overrides */ }, "short": { } }
+}
+```
+
+Anywhere a value can be dynamic it is a JSON constant **or** `{"dsl": "<rule
+body>"}` — a DSL program (assignments + one `return`) that may reference only
+the param's **strict ancestors**. The top-level param must be fully static.
+
+- **Number param** — `{ name, type: "number", range: { from, to }, step? }`.
+  `from`/`to` are **tick-order anchors**: `from` labels the tick-first unit,
+  `to` the tick-last. `step` (`1`/`-1`, default `1`, constant or DSL whose
+  branches are literal ±1) maps labels onto the tick order — display only.
+  A bound may be `null` = open-ended (see below).
+- **Named param** — `{ name, type: "named", values: [...], count?, step? }`.
+  Values are identifiers, or `{ "value": "Frostwane", "display": "The
+  Frost's Wane" }` when the display name isn't identifier-shaped. `count`
+  (constant or DSL) activates a prefix of `values` per scope (intercalary
+  months).
+- **Terminal param** additionally carries `unitTicks` (constant or DSL; must
+  resolve to a positive integer): ticks per finest unit.
+- **Derived fields** — `{ name, type: number|boolean|named, values?, expr:
+  {dsl} }`; the expr may reference all params plus `tick`. Display-only.
+- **Format overrides** — one DSL rule per level and style, returning a
+  string template; a rule at level L may reference params at levels ≤ L and
+  derived fields (tick-derived ones only at the terminal level). Defaults:
+  pretty = space-separated with display names, short = slash-separated with
+  1-based ordinals.
+
+**Open-ended eras.** A `null` bound makes a branch unbounded (BC stretching
+to −∞: `from: null, to: 1, step: -1`). Null is legal only when every ancestor
+of the param is Named, the branch is tick-order-extremal at every ancestor
+level, and never on `unitTicks`. Violations are 400 `VALIDATION` at save.
+
+Example — BC/AD with open ends and countdown BC years:
+
+```json
+{
+  "version": 1,
+  "params": [
+    { "name": "era", "type": "named", "values": ["BC", "AD"] },
+    { "name": "year", "type": "number",
+      "range": { "from": { "dsl": "return case era when BC then null when AD then 1" },
+                 "to":   { "dsl": "return case era when BC then 1 when AD then null" } },
+      "step":  { "dsl": "return case era when BC then -1 when AD then 1" } },
+    { "name": "month", "type": "named", "values": ["Frostwane", "Sunreach"] },
+    { "name": "day", "type": "number", "range": { "from": 1, "to": 30 }, "unitTicks": 1 }
+  ],
+  "epoch": { "era": "AD", "year": 1, "month": "Frostwane", "day": 1 }
+}
+```
+
+Leap rules are plain DSL, detected as periodic and converted in closed form:
+
+```json
+{ "name": "day", "type": "number",
+  "range": { "from": 1,
+             "to": { "dsl": "leap := year % 4 = 0\nreturn case month when February then (if leap then 29 else 28) when April, June, September, November then 30 else 31" } },
+  "unitTicks": 1 }
+```
+
+### `rawComponents`
+
+An object binding a **contiguous prefix** of the params, coarsest-first. A
+prefix bound down to unit U denotes U's whole interval `[tickStart, tickEnd)`
+(`tickEnd` exclusive); a full tuple is one terminal unit and always finite.
+
+- `{year: 2, month: "Frostwane", day: 1}` in 2×30-day years → `[60, 61)`
+- `{year: 2}` → `[60, 120)` (whole year)
+- `{era: "BC"}` in the era example → `tickStart: null, tickEnd: 0`
 
 `precisionTier` (`exact` | `circa` | `ordinal`) is display semantics only —
 it never changes the computed ticks.
+
+### Errors
+
+Structural problems, DSL type errors, non-exhaustive `case`s, scope
+violations, illegal `null` bounds, and epoch violations are all rejected at
+calendar save (400 `VALIDATION`, message naming the attachment). Rules that
+are well-typed but undefined at a queried point (a width resolving
+non-positive, a `count` out of range) fail the conversion with 400
+`VALIDATION` naming the param and bound scope.

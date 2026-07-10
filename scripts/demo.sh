@@ -40,11 +40,58 @@ TL_JSON=$(curl -s -X POST "$BASE/worlds/$WORLD/timelines" -H 'content-type: appl
 show "$TL_JSON"
 TL=$(jq -r .id <<<"$TL_JSON")
 
-step "POST /timelines/:id/calendars — a 2×30-day arithmetic calendar"
+step "POST /timelines/:id/calendars — a 2×30-day schema calendar"
 CAL_JSON=$(curl -s -X POST "$BASE/timelines/$TL/calendars" -H 'content-type: application/json' \
-  -d '{"name":"common reckoning","type":"arithmetic","definition":{"months":[{"name":"Frostwane","days":30},{"name":"Sunreach","days":30}]}}')
+  -d '{"name":"common reckoning","definition":{"version":1,"params":[{"name":"year","type":"number","range":{"from":null,"to":null}},{"name":"month","type":"named","values":["Frostwane","Sunreach"]},{"name":"day","type":"number","range":{"from":1,"to":30},"unitTicks":1}],"epoch":{"year":1,"month":"Frostwane","day":1}}}')
 show "$CAL_JSON"
 CAL=$(jq -r .id <<<"$CAL_JSON")
+
+step "POST /timelines/:id/calendars — a full Gregorian calendar (DSL leap rule + derived weekday + BC/AD formatting)"
+# Months carry names; the terminal 'day' length is a DSL rule (30/31, 29 in leap years),
+# 'weekday' is derived straight off the tick, and 'day' formatting flips AD/BC on the year sign.
+GREG_DEF=$(cat <<'JSON'
+{
+  "name": "Gregorian",
+  "definition": {
+    "version": 1,
+    "params": [
+      { "name": "year", "type": "number", "range": { "from": -9999, "to": 9999 }, "step": 1 },
+      { "name": "month", "type": "named",
+        "values": ["January","February","March","April","May","June",
+                   "July","August","September","October","November","December"] },
+      { "name": "day", "type": "number", "unitTicks": 1,
+        "range": {
+          "from": 1,
+          "to": { "dsl": "leap := year % 4 = 0\nreturn case month when February then (if leap then 29 else 28) when April, June, September, November then 30 else 31" }
+        } }
+    ],
+    "epoch": { "year": 1, "month": "January", "day": 1 },
+    "derivedFields": [
+      { "name": "weekday", "type": "named",
+        "values": ["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"],
+        "expr": { "dsl": "return tick % 7" } }
+    ],
+    "format": {
+      "pretty": { "day": { "dsl": "bcyear := 1 - year\nreturn if year >= 1 then \"{month} {day}, {year} AD\" else \"{month} {day}, {bcyear} BC\"" } },
+      "short":  { "day": { "dsl": "return \"{year}/{ordinal(month):02d}/{day:02d}\"" } }
+    }
+  }
+}
+JSON
+)
+GREG_JSON=$(curl -s -X POST "$BASE/timelines/$TL/calendars" -H 'content-type: application/json' -d "$GREG_DEF")
+jq '{id, name}' <<<"$GREG_JSON"
+GREG=$(jq -r .id <<<"$GREG_JSON")
+
+step "POST /calendars/:id/convert — tick 31 → date (leap-aware month width + derived weekday)"
+# Tick 31 = day 32 from epoch → February 1 of year 1 (January has 31 days).
+curl -s -X POST "$BASE/calendars/$GREG/convert" -H 'content-type: application/json' \
+  -d '{"tick":31}' | jq .
+
+step "POST /calendars/:id/convert — the Ides of March, 44 BC → ticks (BC/AD + ordinal formatting)"
+# year -43 renders as '44 BC'; short form pads the month ordinal to 2 digits.
+curl -s -X POST "$BASE/calendars/$GREG/convert" -H 'content-type: application/json' \
+  -d '{"date":{"year":-43,"month":"March","day":15}}' | jq .
 
 step "POST /worlds/:id/relation-types — edge vocabulary"
 RT_JSON=$(curl -s -X POST "$BASE/worlds/$WORLD/relation-types" -H 'content-type: application/json' \
@@ -89,7 +136,7 @@ curl -s -X POST "$BASE/geometries/$GEO/finalize" | jq '{id, status, bboxes, prop
 
 step "POST /entries/:id/date-ranges — server converts calendar date → ticks"
 curl -s -X POST "$BASE/entries/$COAST/date-ranges" -H 'content-type: application/json' \
-  -d "{\"calendarId\":\"$CAL\",\"rawComponents\":{\"year\":2,\"month\":1,\"day\":1},\"precisionTier\":\"exact\"}" \
+  -d "{\"calendarId\":\"$CAL\",\"rawComponents\":{\"year\":2,\"month\":\"Frostwane\",\"day\":1},\"precisionTier\":\"exact\"}" \
   | jq '{rawComponents, tickStart, tickEnd}'
 
 step "POST /relations — Shattered Coast located-in Old Kingdom"

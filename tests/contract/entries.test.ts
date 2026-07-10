@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { makeApp, resetDb, api, createWorld, createEntry, readyArtifact } from '../helpers.js';
+import { makeApp, resetDb, api, createWorld, createEntry, createSection } from '../helpers.js';
 
 let app: FastifyInstance;
 beforeAll(async () => {
@@ -15,13 +15,13 @@ describe('POST /worlds/:worldId/entries', () => {
   it('creates an entry with tags', async () => {
     const w = await createWorld(app);
     const res = await api(app, 'POST', `/worlds/${w.id}/entries`, {
-      type: 'region',
+      type: 'location',
       title: 'The Shattered Coast',
       tags: ['coastal', 'ruined'],
     });
     expect(res.status).toBe(201);
     expect(res.body.worldId).toBe(w.id);
-    expect(res.body.type).toBe('region');
+    expect(res.body.type).toBe('location');
     expect(res.body.title).toBe('The Shattered Coast');
     expect([...res.body.tags].sort()).toEqual(['coastal', 'ruined']);
     expect(typeof res.body.createdAt).toBe('string');
@@ -36,21 +36,31 @@ describe('POST /worlds/:worldId/entries', () => {
 
   it('404s on an unknown world', async () => {
     const res = await api(app, 'POST', '/worlds/00000000-0000-0000-0000-000000000000/entries', {
-      type: 'region',
+      type: 'location',
       title: 'x',
     });
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+
+  it('rejects a type slug not registered in the world (strict FK)', async () => {
+    const w = await createWorld(app);
+    const res = await api(app, 'POST', `/worlds/${w.id}/entries`, {
+      type: 'nonesuch',
+      title: 'x',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION');
   });
 });
 
 describe('GET /worlds/:worldId/entries', () => {
   it('filters by type and tag', async () => {
     const w = await createWorld(app);
-    const region = await createEntry(app, w.id, { type: 'region', title: 'Coast', tags: ['wet'] });
+    const region = await createEntry(app, w.id, { type: 'location', title: 'Coast', tags: ['wet'] });
     await createEntry(app, w.id, { type: 'character', title: 'Mara' });
 
-    const byType = await api(app, 'GET', `/worlds/${w.id}/entries?type=region`);
+    const byType = await api(app, 'GET', `/worlds/${w.id}/entries?type=location`);
     expect(byType.status).toBe(200);
     expect(byType.body.items.map((e: any) => e.id)).toEqual([region.id]);
 
@@ -83,29 +93,23 @@ describe('GET /worlds/:worldId/entries', () => {
 });
 
 describe('GET /entries/:entryId', () => {
-  it('returns the full detail shape with artifact metadata', async () => {
+  it('returns the full detail shape with sections and relations', async () => {
     const w = await createWorld(app);
     const entry = await createEntry(app, w.id, { tags: ['a'] });
-    const doc = await readyArtifact(
-      app,
-      entry.id,
-      'documents',
-      { role: 'body' },
-      '# Hello',
-      'text/markdown'
-    );
+    const section = await createSection(app, entry.id, { label: 'Overview' });
 
     const res = await api(app, 'GET', `/entries/${entry.id}`);
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(entry.id);
     expect(res.body.tags).toEqual(['a']);
-    expect(res.body.documents).toEqual([
-      { id: doc.id, role: 'body', label: null, status: 'ready' },
+    expect(res.body.sections).toEqual([
+      { id: section.id, label: 'Overview', order: 1, contentJson: null },
     ]);
     expect(res.body.images).toEqual([]);
     expect(res.body.sketches).toEqual([]);
     expect(res.body.geometries).toEqual([]);
     expect(res.body.dateRanges).toEqual([]);
+    expect(res.body.relations).toEqual([]);
   });
 
   it('404s on an unknown id', async () => {
@@ -121,11 +125,11 @@ describe('PATCH /entries/:entryId', () => {
     const entry = await createEntry(app, w.id);
     const res = await api(app, 'PATCH', `/entries/${entry.id}`, {
       title: 'Renamed',
-      type: 'city',
+      type: 'faction',
     });
     expect(res.status).toBe(200);
     expect(res.body.title).toBe('Renamed');
-    expect(res.body.type).toBe('city');
+    expect(res.body.type).toBe('faction');
   });
 });
 
@@ -145,13 +149,13 @@ describe('PUT /entries/:entryId/tags', () => {
 });
 
 describe('DELETE /entries/:entryId', () => {
-  it('deletes the entry and cascades to its artifacts', async () => {
+  it('deletes the entry and cascades to its sections', async () => {
     const w = await createWorld(app);
     const entry = await createEntry(app, w.id);
-    const doc = await readyArtifact(app, entry.id, 'documents', { role: 'body' }, 'text');
+    const section = await createSection(app, entry.id);
 
     expect((await api(app, 'DELETE', `/entries/${entry.id}`)).status).toBe(204);
     expect((await api(app, 'GET', `/entries/${entry.id}`)).status).toBe(404);
-    expect((await api(app, 'GET', `/documents/${doc.id}`)).status).toBe(404);
+    expect((await api(app, 'GET', `/sections/${section.id}`)).status).toBe(404);
   });
 });

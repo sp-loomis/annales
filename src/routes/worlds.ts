@@ -11,9 +11,19 @@ const worldBody = {
 
 const serialize = (w: { id: string; name: string }) => ({ id: w.id, name: w.name });
 
+// Seeded on every new world; all deletable if unused (409 IN_USE otherwise).
+const DEFAULT_ENTRY_TYPES = ['Character', 'Location', 'Faction', 'Event', 'Object'];
+
 export function worldRoutes(app: FastifyInstance): void {
   app.post<{ Body: { name: string } }>('/worlds', { schema: { body: worldBody } }, async (req, reply) => {
-    const world = await app.prisma.world.create({ data: { name: req.body.name } });
+    const world = await app.prisma.world.create({
+      data: {
+        name: req.body.name,
+        entryTypes: {
+          create: DEFAULT_ENTRY_TYPES.map((name) => ({ name, slug: name.toLowerCase() })),
+        },
+      },
+    });
     return reply.code(201).send(serialize(world));
   });
 
@@ -48,15 +58,14 @@ export function worldRoutes(app: FastifyInstance): void {
     if (!world) throw notFound('world', worldId);
 
     // Storage objects first (best-effort — versioning keeps history anyway).
+    // Sections are DB-only; only file-backed artifacts have storage keys.
     const inWorld = { entry: { worldId } };
-    const [docs, images, sketches, geometries] = await Promise.all([
-      app.prisma.document.findMany({ where: inWorld, select: { filePath: true } }),
+    const [images, sketches, geometries] = await Promise.all([
       app.prisma.image.findMany({ where: inWorld, select: { filePath: true } }),
       app.prisma.sketch.findMany({ where: inWorld, select: { filePath: true } }),
       app.prisma.geometry.findMany({ where: inWorld, select: { filePath: true } }),
     ]);
     const keys = [
-      ...docs.map((d) => d.filePath),
       ...images.flatMap((i) => [i.filePath, thumbKeyFor(i.filePath)]),
       ...sketches.map((s) => s.filePath),
       ...geometries.map((g) => g.filePath),

@@ -96,8 +96,9 @@ Target shape (per STACK.md): Terraform modules + Terragrunt per environment.
 - Orphaned `pending`/`failed` artifact rows accumulate (display-only
   `failed`, no sweep) — fine until it isn't; a cleanup endpoint or TTL sweep
   is the fix.
-- `table` calendar type is reserved but unimplemented; arithmetic calendars
-  have no leap rules (by design — `table` will cover irregular years).
+- Calendar conversion recompiles the stored definition per request and Tier-1
+  cycle tables are rebuilt per query (the spec's deliberate no-cache stance) —
+  additive memoization is available if profiling ever demands it.
 - Entry titles are not in the search index (only artifact text/labels) —
   probably wanted before the frontend search box ships.
 - Raster ingestion (GDAL contour/polygonize) is offline-only by design and

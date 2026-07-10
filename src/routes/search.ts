@@ -91,8 +91,8 @@ export function searchRoutes(app: FastifyInstance): void {
             bbox: { type: 'string' },
             globeId: { type: 'string' },
             exact: { type: 'boolean', default: false },
-            tickStart: { type: 'number' },
-            tickEnd: { type: 'number' },
+            tickStart: { type: 'integer' },
+            tickEnd: { type: 'integer' },
             timelineId: { type: 'string' },
             limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
             cursor: { type: 'string' },
@@ -124,7 +124,7 @@ export function searchRoutes(app: FastifyInstance): void {
 
       // ---- Stage 1: index-backed candidate narrowing, all in one query ----
       const conds: Prisma.Sql[] = [Prisma.sql`e."worldId" = ${worldId}`];
-      if (type) conds.push(Prisma.sql`e.type = ${type}`);
+      if (type) conds.push(Prisma.sql`ety.slug = ${type}`);
       for (const tag of tags) {
         conds.push(
           Prisma.sql`EXISTS (SELECT 1 FROM "EntryTag" et WHERE et."entryId" = e.id AND et.tag = ${tag})`
@@ -158,8 +158,9 @@ export function searchRoutes(app: FastifyInstance): void {
       const candidates = await app.prisma.$queryRaw<
         { id: string; title: string; type: string; updatedAt: Date }[]
       >(Prisma.sql`
-        SELECT e.id, e.title, e.type, e."updatedAt"
+        SELECT e.id, e.title, ety.slug AS type, e."updatedAt"
         FROM "Entry" e
+        JOIN "EntryType" ety ON ety.id = e."typeId"
         WHERE ${Prisma.join(conds, ' AND ')}
         ORDER BY e."updatedAt" DESC`);
 

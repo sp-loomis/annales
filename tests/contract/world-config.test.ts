@@ -12,6 +12,7 @@ import {
   createCalendar,
   createRelationType,
   readyArtifact,
+  DEFAULT_CALENDAR_DEFINITION,
 } from '../helpers.js';
 import { rectFeature } from '../fixtures.js';
 
@@ -163,47 +164,75 @@ describe('/timelines/:timelineId/calendars', () => {
     const tl = await createTimeline(app, w.id);
     const cal = await createCalendar(app, tl.id);
     expect(cal.timelineId).toBe(tl.id);
-    expect(cal.type).toBe('arithmetic');
-    expect(cal.definition.months).toHaveLength(2);
+    expect(cal.definition.params).toHaveLength(3);
+    expect(cal.type).toBeUndefined();
   });
 
-  it("rejects type 'table' (reserved) and unknown types", async () => {
+  it('rejects a structurally invalid definition', async () => {
     const w = await createWorld(app);
     const tl = await createTimeline(app, w.id);
-    for (const type of ['table', 'lunar']) {
+    for (const definition of [
+      {},
+      { version: 1, params: [], epoch: {} },
+      { version: 2, params: DEFAULT_CALENDAR_DEFINITION.params, epoch: DEFAULT_CALENDAR_DEFINITION.epoch },
+    ]) {
       const res = await api(app, 'POST', `/timelines/${tl.id}/calendars`, {
-        name: `cal-${type}`,
-        type,
-        definition: {},
+        name: 'bad',
+        definition,
       });
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION');
     }
   });
 
-  it('409s on a duplicate name in the same timeline', async () => {
+  it('rejects a DSL type error with a message naming the attachment', async () => {
     const w = await createWorld(app);
     const tl = await createTimeline(app, w.id);
-    await createCalendar(app, tl.id, { name: 'common' });
+    const definition = JSON.parse(JSON.stringify(DEFAULT_CALENDAR_DEFINITION));
+    definition.params[2].range.to = { dsl: 'return month + 1' };
     const res = await api(app, 'POST', `/timelines/${tl.id}/calendars`, {
-      name: 'common',
-      type: 'arithmetic',
-      definition: { months: [{ name: 'M', days: 10 }] },
+      name: 'bad-dsl',
+      definition,
     });
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION');
+    expect(res.body.error.message).toMatch(/day/);
   });
 
-  it('allows the same calendar name in a different timeline', async () => {
+  it('rejects an illegal open-ended bound (Number ancestor in the chain)', async () => {
+    const w = await createWorld(app);
+    const tl = await createTimeline(app, w.id);
+    const definition = JSON.parse(JSON.stringify(DEFAULT_CALENDAR_DEFINITION));
+    // The December trap: a null day-count under a Number year silently
+    // un-terminates every coarser level.
+    definition.params[2].range.to = {
+      dsl: 'return case month when Sunreach then null else 30',
+    };
+    const res = await api(app, 'POST', `/timelines/${tl.id}/calendars`, {
+      name: 'trap',
+      definition,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION');
+    expect(res.body.error.message).toMatch(/Named|ancestor/i);
+  });
+
+  it('409s on a duplicate name in the same timeline, allows it in another', async () => {
     const w = await createWorld(app);
     const t1 = await createTimeline(app, w.id, 'ages');
     const t2 = await createTimeline(app, w.id, 'reigns');
     await createCalendar(app, t1.id, { name: 'common' });
-    const res = await api(app, 'POST', `/timelines/${t2.id}/calendars`, {
+    const dup = await api(app, 'POST', `/timelines/${t1.id}/calendars`, {
       name: 'common',
-      type: 'arithmetic',
-      definition: { months: [{ name: 'M', days: 10 }] },
+      definition: DEFAULT_CALENDAR_DEFINITION,
     });
-    expect(res.status).toBe(201);
+    expect(dup.status).toBe(409);
+    expect(dup.body.error.code).toBe('CONFLICT');
+    const other = await api(app, 'POST', `/timelines/${t2.id}/calendars`, {
+      name: 'common',
+      definition: DEFAULT_CALENDAR_DEFINITION,
+    });
+    expect(other.status).toBe(201);
   });
 
   it('refuses to delete a calendar still referenced by a date range', async () => {
@@ -220,6 +249,53 @@ describe('/timelines/:timelineId/calendars', () => {
     const res = await api(app, 'DELETE', `/calendars/${cal.id}`);
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('IN_USE');
+  });
+
+  it('PATCHing a definition recomputes the ticks of dependent date ranges', async () => {
+    const w = await createWorld(app);
+    const tl = await createTimeline(app, w.id);
+    const entry = await createEntry(app, w.id);
+    const cal = await createCalendar(app, tl.id);
+    const range = await api(app, 'POST', `/entries/${entry.id}/date-ranges`, {
+      calendarId: cal.id,
+      rawComponents: { year: 2 },
+      precisionTier: 'exact',
+    });
+    expect(range.body.tickStart).toBe(60);
+
+    // Days now run 1..15 → 30-tick years.
+    const definition = JSON.parse(JSON.stringify(DEFAULT_CALENDAR_DEFINITION));
+    definition.params[2].range.to = 15;
+    const patched = await api(app, 'PATCH', `/calendars/${cal.id}`, { definition });
+    expect(patched.status).toBe(200);
+
+    const detail = await api(app, 'GET', `/entries/${entry.id}`);
+    expect(detail.body.dateRanges[0].tickStart).toBe(30);
+    expect(detail.body.dateRanges[0].tickEnd).toBe(60);
+  });
+
+  it('a definition change that orphans a date range fails the whole PATCH', async () => {
+    const w = await createWorld(app);
+    const tl = await createTimeline(app, w.id);
+    const entry = await createEntry(app, w.id);
+    const cal = await createCalendar(app, tl.id);
+    const range = await api(app, 'POST', `/entries/${entry.id}/date-ranges`, {
+      calendarId: cal.id,
+      rawComponents: { year: 1, month: 'Sunreach', day: 1 },
+      precisionTier: 'exact',
+    });
+
+    // Drop Sunreach: the stored rawComponents no longer fit.
+    const definition = JSON.parse(JSON.stringify(DEFAULT_CALENDAR_DEFINITION));
+    definition.params[1].values = ['Frostwane'];
+    const res = await api(app, 'PATCH', `/calendars/${cal.id}`, { definition });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION');
+    expect(res.body.error.message).toContain(range.body.id);
+
+    // The transaction rolled back: definition and ticks are unchanged.
+    const detail = await api(app, 'GET', `/calendars/${cal.id}`);
+    expect(detail.body.definition.params[1].values).toEqual(['Frostwane', 'Sunreach']);
   });
 });
 

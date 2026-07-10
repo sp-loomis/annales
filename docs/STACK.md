@@ -159,19 +159,19 @@ model DateRange {
   id             String @id @default(uuid())
   entryId        String                          // not null, FK
   calendarId     String                          // not null, FK — range is meaningless without it
-  rawComponents  Json                            // not null — as-authored (year/month/day, or
-                                                   //   ordinal stage label)
-  tickStart      Float?                          // nullable — null if unanchored ordinal
-  tickEnd        Float?                          // nullable — null if open-ended/unknown
-  precisionTier  String                          // not null — 'exact' | 'circa' | 'ordinal'
+  rawComponents  Json                            // not null — as-authored contiguous prefix of the
+                                                   //   calendar's param hierarchy
+  tickStart      BigInt?                         // nullable — null only on an open-ended era side
+  tickEnd        BigInt?                         // nullable — same
+  precisionTier  String                          // not null — 'exact' | 'circa' | 'ordinal' (advisory)
 }
 
 model Calendar {
   id         String @id @default(uuid())
   timelineId String                              // not null, FK -> Timeline (world reached via timeline)
   name       String                              // not null
-  type       String                              // not null — 'arithmetic' | 'table' | 'ordinal'
-  definition Json                                // not null — rule set specific to type
+  definition Json                                // not null — versioned schema + DSL rules
+                                                   //   (docs/API.md appendix; docs/sketch/*)
   @@unique([timelineId, name])
 }
 

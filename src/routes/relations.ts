@@ -1,8 +1,7 @@
 import { Prisma } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { conflict, crossWorld, notFound, validation } from '../lib/errors.js';
-
-type Direction = 'out' | 'in' | 'both';
+import { type Direction, relationsView } from '../lib/relations-view.js';
 
 const directionSchema = { enum: ['out', 'in', 'both'], default: 'both' };
 
@@ -71,30 +70,7 @@ export function relationRoutes(app: FastifyInstance): void {
       const entry = await app.prisma.entry.findUnique({ where: { id: entryId } });
       if (!entry) throw notFound('entry', entryId);
 
-      const directionWhere =
-        direction === 'out'
-          ? { fromId: entryId }
-          : direction === 'in'
-            ? { toId: entryId }
-            : { OR: [{ fromId: entryId }, { toId: entryId }] };
-
-      const rows = await app.prisma.relation.findMany({
-        where: { ...directionWhere, ...(typeId ? { typeId } : {}) },
-        include: { from: true, to: true, type: true },
-      });
-
-      return {
-        items: rows.map((r) => {
-          const other = r.fromId === entryId ? r.to : r.from;
-          return {
-            id: r.id,
-            fromId: r.fromId,
-            toId: r.toId,
-            type: { id: r.type.id, name: r.type.name, inverseName: r.type.inverseName },
-            otherEntry: { id: other.id, title: other.title, type: other.type },
-          };
-        }),
-      };
+      return { items: await relationsView(app.prisma, entryId, { direction, typeId }) };
     }
   );
 
@@ -152,7 +128,7 @@ export function relationRoutes(app: FastifyInstance): void {
       const depthOf = new Map(reached.map((r) => [r.id, r.depth]));
       const ids = [...depthOf.keys()];
       const [entries, edges] = await Promise.all([
-        app.prisma.entry.findMany({ where: { id: { in: ids } } }),
+        app.prisma.entry.findMany({ where: { id: { in: ids } }, include: { type: true } }),
         app.prisma.relation.findMany({
           where: {
             fromId: { in: ids },
@@ -166,7 +142,7 @@ export function relationRoutes(app: FastifyInstance): void {
         nodes: entries.map((e) => ({
           id: e.id,
           title: e.title,
-          type: e.type,
+          type: e.type.slug,
           depth: depthOf.get(e.id) ?? 0,
         })),
         edges: edges.map((e) => ({

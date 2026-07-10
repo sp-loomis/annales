@@ -31,9 +31,10 @@ const prisma = new PrismaClient({ datasources: { db: { url: TEST_DATABASE_URL } 
 
 export async function resetDb(): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "World", "Entry", "EntryTag", "Document", "Image", "Sketch", ' +
+    'TRUNCATE TABLE "World", "Entry", "EntryType", "EntryTag", "Section", "Image", "Sketch", ' +
       '"Geometry", "GeometryBox", "Globe", "CrsDefinition", "DateRange", ' +
-      '"Timeline", "Calendar", "RelationType", "Relation", "SearchIndex" CASCADE'
+      '"Timeline", "Calendar", "RelationType", "Relation", "SearchIndex", ' +
+      '"WorldTheme", "WorkspaceState" CASCADE'
   );
 }
 
@@ -94,6 +95,9 @@ export async function createWorld(app: FastifyInstance, name = 'Testland'): Prom
   return must(await api(app, 'POST', '/worlds', { name }), 201, 'createWorld');
 }
 
+// 'location' is one of the default entry types seeded on world create, so
+// createEntry works without first registering a type. Pass over.type with any
+// other seeded slug (character/faction/event/object) or a slug you created.
 export async function createEntry(
   app: FastifyInstance,
   worldId: string,
@@ -101,12 +105,60 @@ export async function createEntry(
 ): Promise<any> {
   return must(
     await api(app, 'POST', `/worlds/${worldId}/entries`, {
-      type: 'place',
+      type: 'location',
       title: 'Somewhere',
       ...over,
     }),
     201,
     'createEntry'
+  );
+}
+
+export async function createEntryType(
+  app: FastifyInstance,
+  worldId: string,
+  over: Record<string, unknown> = {}
+): Promise<any> {
+  return must(
+    await api(app, 'POST', `/worlds/${worldId}/entry-types`, {
+      name: 'Creature',
+      slug: 'creature',
+      ...over,
+    }),
+    201,
+    'createEntryType'
+  );
+}
+
+export async function createSection(
+  app: FastifyInstance,
+  entryId: string,
+  over: Record<string, unknown> = {}
+): Promise<any> {
+  return must(
+    await api(app, 'POST', `/entries/${entryId}/sections`, { ...over }),
+    201,
+    'createSection'
+  );
+}
+
+/** Minimal ProseMirror document wrapping a single paragraph of text. */
+export function proseDoc(text: string): Record<string, unknown> {
+  return { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] };
+}
+
+/** Create a section and PATCH content in — the section's text enters the index. */
+export async function readySection(
+  app: FastifyInstance,
+  entryId: string,
+  text: string,
+  over: Record<string, unknown> = {}
+): Promise<any> {
+  const s = await createSection(app, entryId, over);
+  return must(
+    await api(app, 'PATCH', `/sections/${s.id}`, { contentJson: proseDoc(text) }),
+    200,
+    'readySection'
   );
 }
 
@@ -144,6 +196,19 @@ export async function createCrs(
   return must(await api(app, 'POST', `/globes/${globeId}/crs`, { name, params }), 201, 'createCrs');
 }
 
+// Default test calendar: proleptic years of two 30-day months → 60-tick years,
+// {year: 1, month: 'Frostwane', day: 1} = tick 0. Search fixtures rely on this
+// exact tick geometry ({year: 2} → [60, 120), {year: 101} → [6000, 6060)).
+export const DEFAULT_CALENDAR_DEFINITION = {
+  version: 1,
+  params: [
+    { name: 'year', type: 'number', range: { from: null, to: null } },
+    { name: 'month', type: 'named', values: ['Frostwane', 'Sunreach'] },
+    { name: 'day', type: 'number', range: { from: 1, to: 30 }, unitTicks: 1 },
+  ],
+  epoch: { year: 1, month: 'Frostwane', day: 1 },
+};
+
 export async function createCalendar(
   app: FastifyInstance,
   timelineId: string,
@@ -152,13 +217,7 @@ export async function createCalendar(
   return must(
     await api(app, 'POST', `/timelines/${timelineId}/calendars`, {
       name: 'common reckoning',
-      type: 'arithmetic',
-      definition: {
-        months: [
-          { name: 'Frostwane', days: 30 },
-          { name: 'Sunreach', days: 30 },
-        ],
-      },
+      definition: DEFAULT_CALENDAR_DEFINITION,
       ...over,
     }),
     201,
@@ -183,7 +242,7 @@ export async function createRelationType(
 export async function readyArtifact(
   app: FastifyInstance,
   entryId: string,
-  kind: 'documents' | 'images' | 'sketches' | 'geometries',
+  kind: 'images' | 'sketches' | 'geometries',
   createBody: Record<string, unknown>,
   payload: string | Uint8Array,
   contentType = 'application/octet-stream'

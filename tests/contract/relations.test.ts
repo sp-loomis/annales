@@ -109,12 +109,21 @@ describe('GET /entries/:entryId/relations', () => {
     expect(out.status).toBe(200);
     expect(out.body.items).toHaveLength(1);
     const edge = out.body.items[0];
+    expect(edge.direction).toBe('out');
     expect(edge.type).toEqual({
       id: locatedIn.id,
       name: 'located-in',
       inverseName: 'contains',
+      iconName: null,
+      iconWeight: null,
     });
-    expect(edge.otherEntry).toEqual({ id: b.id, title: 'Province', type: 'place' });
+    expect(edge.otherEntry).toEqual({
+      id: b.id,
+      title: 'Province',
+      type: 'location',
+      iconName: null,
+      iconWeight: null,
+    });
 
     const inbound = await api(app, 'GET', `/entries/${a.id}/relations?direction=in`);
     expect(inbound.body.items).toEqual([]);
@@ -133,6 +142,25 @@ describe('GET /entries/:entryId/relations', () => {
     const res = await api(app, 'GET', `/entries/${a.id}/relations?typeId=${causes.id}`);
     expect(res.body.items).toHaveLength(1);
     expect(res.body.items[0].type.name).toBe('causes');
+  });
+});
+
+describe('relation type icons', () => {
+  it('round-trips iconName/iconWeight through create and patch', async () => {
+    const w = await createWorld(app);
+    const created = await api(app, 'POST', `/worlds/${w.id}/relation-types`, {
+      name: 'allied-with',
+      inverseName: 'allied-with',
+      iconName: 'Handshake',
+      iconWeight: 'bold',
+    });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({ iconName: 'Handshake', iconWeight: 'bold' });
+
+    const patched = await api(app, 'PATCH', `/relation-types/${created.body.id}`, {
+      iconName: 'Sword',
+    });
+    expect(patched.body).toMatchObject({ iconName: 'Sword', iconWeight: 'bold' });
   });
 });
 

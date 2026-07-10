@@ -7,11 +7,16 @@ import { Storage } from './lib/storage.js';
 import { healthRoutes } from './routes/health.js';
 import { worldRoutes } from './routes/worlds.js';
 import { entryRoutes } from './routes/entries.js';
+import { entryTypeRoutes } from './routes/entry-types.js';
+import { sectionRoutes } from './routes/sections.js';
 import { artifactRoutes } from './routes/artifacts.js';
 import { worldConfigRoutes } from './routes/world-config.js';
+import { calendarRoutes } from './routes/calendars.js';
 import { dateRangeRoutes } from './routes/date-ranges.js';
 import { relationRoutes } from './routes/relations.js';
 import { searchRoutes } from './routes/search.js';
+import { worldThemeRoutes } from './routes/world-theme.js';
+import { workspaceStateRoutes } from './routes/workspace-state.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -64,11 +69,16 @@ export async function buildApp(overrides: Partial<AppConfig> = {}): Promise<Fast
   healthRoutes(app);
   worldRoutes(app);
   entryRoutes(app);
+  entryTypeRoutes(app);
+  sectionRoutes(app);
   artifactRoutes(app);
   worldConfigRoutes(app);
+  calendarRoutes(app);
   dateRangeRoutes(app);
   relationRoutes(app);
   searchRoutes(app);
+  worldThemeRoutes(app);
+  workspaceStateRoutes(app);
 
   return app;
 }
