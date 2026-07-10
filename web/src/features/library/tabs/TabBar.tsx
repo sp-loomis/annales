@@ -12,6 +12,7 @@ import {
   CaretDown,
   Circle,
   CornersIn,
+  Plus,
   X,
 } from "@phosphor-icons/react";
 import { keys } from "../../../api/keys";
@@ -19,7 +20,7 @@ import { getEntry, listEntryTypes } from "../../../api/endpoints";
 import { useWorkspaceStore, selectWorkspace } from "../../../stores/workspaceStore";
 import { useDraftStore, useIsDirty } from "../../../stores/draftStore";
 import { isDraftDirty } from "../entry/edit/draft";
-import { getUntitledLabel, isTempEntryId } from "../entry/tempEntry";
+import { getUntitledLabel, isTempEntryId, makeTempEntryId } from "../entry/tempEntry";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { IconButton } from "../../../components/IconButton";
 import { WorldIcon } from "../../../components/icons/WorldIcon";
@@ -32,11 +33,13 @@ import styles from "./TabBar.module.css";
 function Tab({
   entryId,
   active,
+  tabRef,
   onSelect,
   onClose,
 }: {
   entryId: string;
   active: boolean;
+  tabRef?: (el: HTMLDivElement | null) => void;
   onSelect: () => void;
   onClose: () => void;
 }) {
@@ -64,6 +67,7 @@ function Tab({
 
   return (
     <div
+      ref={tabRef}
       className={[styles.tab, active ? styles.active : ""].filter(Boolean).join(" ")}
       data-testid={TID.tab(entryId)}>
       <button type="button" className={styles.tabLabel} onClick={onSelect}>
@@ -90,18 +94,23 @@ function Tab({
 
 export function TabBar() {
   const focusIconSize = useScaledPxSoft(16);
+  const newIconSize = useScaledPxSoft(13);
   const overflowIconSize = useScaledPxSoft(13);
   const shellControls = useShellChromeControls();
   const portalContainer = getOverlayContainer();
+  const worldId = useWorkspaceStore((s) => s.activeWorldId);
   const openEntryIds = useWorkspaceStore((s) => selectWorkspace(s).openEntryIds);
   const activeEntryId = useWorkspaceStore((s) => selectWorkspace(s).activeEntryId);
   const setActiveTab = useWorkspaceStore((s) => s.setActiveTab);
+  const openTab = useWorkspaceStore((s) => s.openTab);
   const closeTab = useWorkspaceStore((s) => s.closeTab);
+  const startUntitledDraft = useDraftStore((s) => s.startUntitledDraft);
   const queryClient = useQueryClient();
 
   const [pendingClose, setPendingClose] = useState<string | null>(null);
   const [overflowing, setOverflowing] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef(new Map<string, HTMLDivElement>());
 
   useEffect(() => {
     const el = rowRef.current;
@@ -112,6 +121,13 @@ export function TabBar() {
     observer.observe(el);
     return () => observer.disconnect();
   }, [openEntryIds.length]);
+
+  useEffect(() => {
+    if (!activeEntryId) return;
+    const activeTab = tabRefs.current.get(activeEntryId);
+    if (!activeTab) return;
+    activeTab.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
+  }, [activeEntryId, openEntryIds.length]);
 
   if (openEntryIds.length === 0 && !shellControls?.isFocusMode) return null;
 
@@ -139,6 +155,20 @@ export function TabBar() {
       ? "Enter fullscreen"
       : "Fullscreen unavailable in this browser";
 
+  const createUntitledEntry = async () => {
+    if (!worldId) return;
+    const types = await queryClient.fetchQuery({
+      queryKey: keys.entryTypes(worldId),
+      queryFn: () => listEntryTypes(worldId),
+      staleTime: 30_000,
+    });
+    const defaultType = types.items[0]?.slug;
+    if (!defaultType) return;
+    const tempEntryId = makeTempEntryId();
+    startUntitledDraft(tempEntryId, defaultType);
+    openTab(tempEntryId);
+  };
+
   return (
     <div className={styles.bar}>
       <div className={styles.row} ref={rowRef}>
@@ -147,11 +177,49 @@ export function TabBar() {
             key={id}
             entryId={id}
             active={id === activeEntryId}
+            tabRef={(el) => {
+              if (el) {
+                tabRefs.current.set(id, el);
+              } else {
+                tabRefs.current.delete(id);
+              }
+            }}
             onSelect={() => setActiveTab(id)}
             onClose={() => requestClose(id)}
           />
         ))}
       </div>
+      {overflowing && (
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button
+              type="button"
+              className={styles.overflowTrigger}
+              aria-label="All open tabs"
+              data-testid={TID.tabOverflowTrigger}>
+              <CaretDown size={overflowIconSize} />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal container={portalContainer}>
+            <DropdownMenu.Content className={styles.overflowMenu} align="end" sideOffset={4}>
+              {openEntryIds.map((id) => (
+                <OverflowItem key={id} entryId={id} onSelect={() => setActiveTab(id)} />
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+      )}
+      {shellControls?.isFocusMode && (
+        <div className={styles.leadingAction}>
+          <IconButton
+            className={styles.newButton}
+            label="New entry"
+            onClick={() => void createUntitledEntry()}
+            data-testid={TID.tabNewButton}>
+            <Plus size={newIconSize} />
+          </IconButton>
+        </div>
+      )}
       {shellControls?.isFocusMode && (
         <div className={styles.actions}>
           <IconButton
@@ -176,26 +244,6 @@ export function TabBar() {
             )}
           </IconButton>
         </div>
-      )}
-      {overflowing && (
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <button
-              type="button"
-              className={styles.overflowTrigger}
-              aria-label="All open tabs"
-              data-testid={TID.tabOverflowTrigger}>
-              <CaretDown size={overflowIconSize} />
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal container={portalContainer}>
-            <DropdownMenu.Content className={styles.overflowMenu} align="end" sideOffset={4}>
-              {openEntryIds.map((id) => (
-                <OverflowItem key={id} entryId={id} onSelect={() => setActiveTab(id)} />
-              ))}
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
       )}
       <ConfirmDialog
         open={pendingClose !== null}

@@ -34,6 +34,7 @@ export const TID = {
   // tabs
   tab: (entryId: string) => `tab-${entryId}`,
   tabClose: (entryId: string) => `tab-close-${entryId}`,
+  tabNewButton: "tab-new-button",
   tabOverflowTrigger: "tab-overflow-trigger",
   tabOverflowItem: (entryId: string) => `tab-overflow-item-${entryId}`,
 
