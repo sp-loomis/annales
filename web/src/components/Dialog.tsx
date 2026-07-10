@@ -1,11 +1,12 @@
 // Styled Radix Dialog wrapper. Compose Root/Trigger from radix-ui directly;
 // this exports the styled overlay+content shell.
 
-import { Dialog as RadixDialog } from 'radix-ui';
-import type { ReactNode } from 'react';
-import { X } from '@phosphor-icons/react';
-import { IconButton } from './IconButton';
-import styles from './Dialog.module.css';
+import { Dialog as RadixDialog } from "radix-ui";
+import type { ReactNode } from "react";
+import { X } from "@phosphor-icons/react";
+import { IconButton } from "./IconButton";
+import { getOverlayContainer } from "../lib/overlay";
+import styles from "./Dialog.module.css";
 
 export const Dialog = RadixDialog;
 
@@ -22,13 +23,14 @@ export function DialogContent({
   testId?: string;
   hideClose?: boolean;
 }) {
+  const portalContainer = getOverlayContainer();
+
   return (
-    <RadixDialog.Portal>
+    <RadixDialog.Portal container={portalContainer}>
       <RadixDialog.Overlay className={styles.overlay} />
       <RadixDialog.Content
-        className={[styles.content, wide ? styles.wide : ''].filter(Boolean).join(' ')}
-        data-testid={testId}
-      >
+        className={[styles.content, wide ? styles.wide : ""].filter(Boolean).join(" ")}
+        data-testid={testId}>
         <div className={styles.header}>
           <RadixDialog.Title className={styles.title}>{title}</RadixDialog.Title>
           {!hideClose && (

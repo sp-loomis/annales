@@ -4,9 +4,12 @@
 import { BooksIcon } from "@phosphor-icons/react";
 import { Tooltip } from "radix-ui";
 import { TID } from "../../testids";
+import { getOverlayContainer } from "../../lib/overlay";
 import styles from "./ModeRail.module.css";
 
 export function ModeRail() {
+  const portalContainer = getOverlayContainer();
+
   return (
     <nav className={styles.rail}>
       <Tooltip.Root>
@@ -19,7 +22,7 @@ export function ModeRail() {
             <BooksIcon size={20} />
           </button>
         </Tooltip.Trigger>
-        <Tooltip.Portal>
+        <Tooltip.Portal container={portalContainer}>
           <Tooltip.Content className={styles.tooltip} side="right" sideOffset={6}>
             Library
           </Tooltip.Content>

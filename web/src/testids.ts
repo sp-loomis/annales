@@ -55,7 +55,6 @@ export const TID = {
   blockDelete: (key: string) => `block-delete-${key}`,
   blockDuplicate: (key: string) => `block-duplicate-${key}`,
   blockSplit: (key: string) => `block-split-${key}`,
-  blockToolbarToggle: (key: string) => `block-toolbar-toggle-${key}`,
   blockMerge: (key: string) => `block-merge-${key}`,
   insertBlock: (afterKey: string) => `insert-after-${afterKey}`,
   insertPickerSection: "insert-picker-section",

@@ -2,17 +2,18 @@
 // separate lazy chunk; the drawer loads the scene from the presigned download
 // URL, and Save serializes → fresh upload slot → PUT → finalize → close.
 
-import { Suspense, lazy, useEffect, useState } from 'react';
-import { Dialog, VisuallyHidden } from 'radix-ui';
-import { Button } from '../../../../components/Button';
-import { Spinner } from '../../../../components/Spinner';
-import { useArtifact } from '../read/useArtifact';
-import { useArtifactUpload } from './useArtifactUpload';
-import { TID } from '../../../../testids';
-import styles from './SketchDrawer.module.css';
+import { Suspense, lazy, useEffect, useState } from "react";
+import { Dialog, VisuallyHidden } from "radix-ui";
+import { Button } from "../../../../components/Button";
+import { Spinner } from "../../../../components/Spinner";
+import { getOverlayContainer } from "../../../../lib/overlay";
+import { useArtifact } from "../read/useArtifact";
+import { useArtifactUpload } from "./useArtifactUpload";
+import { TID } from "../../../../testids";
+import styles from "./SketchDrawer.module.css";
 
 const Excalidraw = lazy(() =>
-  import('@excalidraw/excalidraw').then((m) => ({ default: m.Excalidraw }))
+  import("@excalidraw/excalidraw").then((m) => ({ default: m.Excalidraw }))
 );
 
 type ExcalidrawAPI = {
@@ -30,13 +31,14 @@ export function SketchDrawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { data } = useArtifact('sketches', sketchId);
-  const { state, upload } = useArtifactUpload('sketches', sketchId);
+  const { data } = useArtifact("sketches", sketchId);
+  const { state, upload } = useArtifactUpload("sketches", sketchId);
   const [scene, setScene] = useState<object | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [api, setApi] = useState<ExcalidrawAPI | null>(null);
+  const portalContainer = getOverlayContainer();
 
-  const url = data?.status === 'ready' ? data.download?.url : undefined;
+  const url = data?.status === "ready" ? data.download?.url : undefined;
 
   useEffect(() => {
     if (!open) {
@@ -72,22 +74,22 @@ export function SketchDrawer({
 
   const save = async () => {
     if (!api) return;
-    const { serializeAsJSON } = await import('@excalidraw/excalidraw');
+    const { serializeAsJSON } = await import("@excalidraw/excalidraw");
     const json = serializeAsJSON(
       api.getSceneElements() as never,
       api.getAppState() as never,
       api.getFiles() as never,
-      'local'
+      "local"
     );
-    const ok = await upload(new Blob([json], { type: 'application/json' }), 'application/json');
+    const ok = await upload(new Blob([json], { type: "application/json" }), "application/json");
     if (ok) onOpenChange(false);
   };
 
-  const busy = state.phase === 'uploading' || state.phase === 'finalizing';
+  const busy = state.phase === "uploading" || state.phase === "finalizing";
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
+      <Dialog.Portal container={portalContainer}>
         <Dialog.Overlay className={styles.overlay} />
         <Dialog.Content className={styles.content} onEscapeKeyDown={(e) => e.preventDefault()}>
           <VisuallyHidden.Root>
@@ -95,13 +97,17 @@ export function SketchDrawer({
           </VisuallyHidden.Root>
           <div className={styles.toolbar}>
             <span className={styles.title}>Sketch</span>
-            {state.phase === 'failed' && <span className={styles.error}>Save failed — retry</span>}
+            {state.phase === "failed" && <span className={styles.error}>Save failed — retry</span>}
             <div className={styles.actions}>
               <Button onClick={() => onOpenChange(false)} data-testid={TID.sketchClose}>
                 Close without saving
               </Button>
-              <Button variant="primary" onClick={save} disabled={busy || !api} data-testid={TID.sketchSave}>
-                {busy ? 'Saving…' : 'Save sketch'}
+              <Button
+                variant="primary"
+                onClick={save}
+                disabled={busy || !api}
+                data-testid={TID.sketchSave}>
+                {busy ? "Saving…" : "Save sketch"}
               </Button>
             </div>
           </div>
@@ -112,8 +118,7 @@ export function SketchDrawer({
                   <div className={styles.loading}>
                     <Spinner size={22} />
                   </div>
-                }
-              >
+                }>
                 <Excalidraw
                   initialData={scene as never}
                   excalidrawAPI={(a) => setApi(a as unknown as ExcalidrawAPI)}

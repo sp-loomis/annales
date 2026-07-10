@@ -5,6 +5,7 @@
 import { useRef, useState } from "react";
 import { Popover } from "radix-ui";
 import { Image, PencilSimple, Plus, TextAlignLeft } from "@phosphor-icons/react";
+import { getOverlayContainer } from "../../../../lib/overlay";
 import { TID } from "../../../../testids";
 import styles from "./InsertPicker.module.css";
 
@@ -21,6 +22,7 @@ export function InsertPicker({
 }) {
   const [open, setOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const portalContainer = getOverlayContainer();
 
   return (
     <div className={styles.row}>
@@ -35,7 +37,7 @@ export function InsertPicker({
             <span className={styles.label}>Add Item</span>
           </button>
         </Popover.Trigger>
-        <Popover.Portal>
+        <Popover.Portal container={portalContainer}>
           <Popover.Content className={styles.menu} sideOffset={4} align="center">
             <button
               type="button"

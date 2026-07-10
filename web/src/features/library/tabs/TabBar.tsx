@@ -22,6 +22,7 @@ import { isDraftDirty } from "../entry/edit/draft";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { IconButton } from "../../../components/IconButton";
 import { WorldIcon } from "../../../components/icons/WorldIcon";
+import { getOverlayContainer } from "../../../lib/overlay";
 import { TID } from "../../../testids";
 import { useShellChromeControls } from "../../shell/ShellChromeContext";
 import styles from "./TabBar.module.css";
@@ -76,6 +77,7 @@ function Tab({
 
 export function TabBar() {
   const shellControls = useShellChromeControls();
+  const portalContainer = getOverlayContainer();
   const openEntryIds = useWorkspaceStore((s) => selectWorkspace(s).openEntryIds);
   const activeEntryId = useWorkspaceStore((s) => selectWorkspace(s).activeEntryId);
   const setActiveTab = useWorkspaceStore((s) => s.setActiveTab);
@@ -167,7 +169,7 @@ export function TabBar() {
               <CaretDown size={13} />
             </button>
           </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
+          <DropdownMenu.Portal container={portalContainer}>
             <DropdownMenu.Content className={styles.overflowMenu} align="end" sideOffset={4}>
               {openEntryIds.map((id) => (
                 <OverflowItem key={id} entryId={id} onSelect={() => setActiveTab(id)} />

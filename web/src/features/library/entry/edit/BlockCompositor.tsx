@@ -19,14 +19,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import {
-  ArrowsInLineVerticalIcon,
-  Copy,
-  SplitVertical,
-  TextT,
-  TextTSlash,
-  Trash,
-} from "@phosphor-icons/react";
+import { ArrowsInLineVerticalIcon, Copy, SplitVertical, Trash } from "@phosphor-icons/react";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import type { Editor } from "@tiptap/core";
 import { createArtifact, finalizeArtifact, uploadToPresigned } from "../../../../api/endpoints";
@@ -71,7 +64,6 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
   const draft = useDraftStore((s) => s.drafts[entryId]);
   const updateDraft = useDraftStore((s) => s.updateDraft);
   const editorsRef = useRef(new Map<string, Editor>());
-  const [toolbarVisibleByBlock, setToolbarVisibleByBlock] = useState<Record<string, boolean>>({});
   const [pendingUploads, setPendingUploads] = useState<Record<string, PendingUpload>>({});
   const [autoOpenSketch, setAutoOpenSketch] = useState<string | null>(null);
 
@@ -278,25 +270,6 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
                         actionBar={
                           <>
                             <IconButton
-                              label={
-                                (toolbarVisibleByBlock[block.key] ?? false)
-                                  ? "Hide formatting toolbar"
-                                  : "Show formatting toolbar"
-                              }
-                              onClick={() =>
-                                setToolbarVisibleByBlock((prev) => ({
-                                  ...prev,
-                                  [block.key]: !(prev[block.key] ?? false),
-                                }))
-                              }
-                              data-testid={TID.blockToolbarToggle(block.key)}>
-                              {(toolbarVisibleByBlock[block.key] ?? false) ? (
-                                <TextTSlash size={13} />
-                              ) : (
-                                <TextT size={13} />
-                              )}
-                            </IconButton>
-                            <IconButton
                               label="Split at cursor"
                               onClick={() => splitSection(block)}
                               data-testid={TID.blockSplit(block.key)}>
@@ -316,7 +289,6 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
                             </IconButton>
                           </>
                         }
-                        toolbarVisible={toolbarVisibleByBlock[block.key] ?? false}
                         initialContent={block.contentJson}
                         onContentChange={(json) =>
                           updateDraft(entryId, (d) => ({

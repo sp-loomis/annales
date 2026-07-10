@@ -54,13 +54,11 @@ function ToolbarButton({
 }
 
 export function SectionEditor({
-  toolbarVisible = false,
   actionBar,
   initialContent,
   onContentChange,
   onEditorReady,
 }: {
-  toolbarVisible?: boolean;
   actionBar?: React.ReactNode;
   initialContent: PMNode | null;
   onContentChange: (json: PMNode) => void;
@@ -101,104 +99,97 @@ export function SectionEditor({
 
   return (
     <div className={styles.wrapper}>
-      {(actionBar || toolbarVisible) && (
-        <div
-          className={[styles.toolbar, toolbarVisible ? styles.toolbarExpanded : ""]
-            .filter(Boolean)
-            .join(" ")}>
-          {actionBar && <div className={styles.actionBar}>{actionBar}</div>}
-          {toolbarVisible && (
-            <div className={styles.formatBar}>
-              <ToolbarButton
-                editor={editor}
-                active={editor.isActive("bold")}
-                label="Bold"
-                onClick={() => editor.chain().focus().toggleBold().run()}>
-                <TextBIcon size={14} />
-              </ToolbarButton>
-              <ToolbarButton
-                editor={editor}
-                active={editor.isActive("italic")}
-                label="Italic"
-                onClick={() => editor.chain().focus().toggleItalic().run()}>
-                <TextItalicIcon size={14} />
-              </ToolbarButton>
-              <ToolbarButton
-                editor={editor}
-                active={editor.isActive("code")}
-                label="Inline code"
-                onClick={() => editor.chain().focus().toggleCode().run()}>
-                <CodeIcon size={14} />
-              </ToolbarButton>
-              <ToolbarButton
-                editor={editor}
-                active={editor.isActive("math_inline")}
-                label="Inline equation (Cmd+Shift+M)"
-                onClick={() => editor.chain().focus().insertInlineMath().run()}>
-                <FunctionIcon size={14} />
-              </ToolbarButton>
-              <ToolbarButton
-                editor={editor}
-                active={editor.isActive("superscript")}
-                label="Superscript"
-                onClick={() => editor.chain().focus().toggleSuperscript().run()}>
-                <TextSuperscriptIcon size={14} />
-              </ToolbarButton>
-              <ToolbarButton
-                editor={editor}
-                active={editor.isActive("subscript")}
-                label="Subscript"
-                onClick={() => editor.chain().focus().toggleSubscript().run()}>
-                <TextSubscriptIcon size={14} />
-              </ToolbarButton>
-              <span className={styles.divider} />
-              <ToolbarButton
-                editor={editor}
-                active={editor.isActive("heading", { level: 2 })}
-                label="Heading 2"
-                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
-                <TextHOneIcon size={14} />
-              </ToolbarButton>
-              <ToolbarButton
-                editor={editor}
-                active={editor.isActive("heading", { level: 3 })}
-                label="Heading 3"
-                onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
-                <TextHTwoIcon size={14} />
-              </ToolbarButton>
-              <ToolbarButton
-                editor={editor}
-                active={editor.isActive("heading", { level: 4 })}
-                label="Heading 4"
-                onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}>
-                <TextHThreeIcon size={14} />
-              </ToolbarButton>
-              <span className={styles.divider} />
-              <ToolbarButton
-                editor={editor}
-                active={editor.isActive("bulletList")}
-                label="Bullet list"
-                onClick={() => editor.chain().focus().toggleBulletList().run()}>
-                <ListBulletsIcon size={14} />
-              </ToolbarButton>
-              <ToolbarButton
-                editor={editor}
-                active={editor.isActive("orderedList")}
-                label="Ordered list"
-                onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-                <ListIcon size={14} />
-              </ToolbarButton>
-              <ToolbarButton
-                editor={editor}
-                active={editor.isActive("blockquote")}
-                label="Blockquote"
-                onClick={() => editor.chain().focus().toggleBlockquote().run()}>
-                <QuotesIcon size={14} />
-              </ToolbarButton>
-            </div>
-          )}
+      <div className={[styles.toolbar, styles.toolbarExpanded].filter(Boolean).join(" ")}>
+        {actionBar && <div className={styles.actionBar}>{actionBar}</div>}
+        <div className={styles.formatBar}>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("bold")}
+            label="Bold"
+            onClick={() => editor.chain().focus().toggleBold().run()}>
+            <TextBIcon size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("italic")}
+            label="Italic"
+            onClick={() => editor.chain().focus().toggleItalic().run()}>
+            <TextItalicIcon size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("code")}
+            label="Inline code"
+            onClick={() => editor.chain().focus().toggleCode().run()}>
+            <CodeIcon size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("math_inline")}
+            label="Inline equation (Cmd+Shift+M)"
+            onClick={() => editor.chain().focus().insertInlineMath().run()}>
+            <FunctionIcon size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("superscript")}
+            label="Superscript"
+            onClick={() => editor.chain().focus().toggleSuperscript().run()}>
+            <TextSuperscriptIcon size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("subscript")}
+            label="Subscript"
+            onClick={() => editor.chain().focus().toggleSubscript().run()}>
+            <TextSubscriptIcon size={14} />
+          </ToolbarButton>
+          <span className={styles.divider} />
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("heading", { level: 2 })}
+            label="Heading 2"
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
+            <TextHOneIcon size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("heading", { level: 3 })}
+            label="Heading 3"
+            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
+            <TextHTwoIcon size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("heading", { level: 4 })}
+            label="Heading 4"
+            onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}>
+            <TextHThreeIcon size={14} />
+          </ToolbarButton>
+          <span className={styles.divider} />
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("bulletList")}
+            label="Bullet list"
+            onClick={() => editor.chain().focus().toggleBulletList().run()}>
+            <ListBulletsIcon size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("orderedList")}
+            label="Ordered list"
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+            <ListIcon size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            editor={editor}
+            active={editor.isActive("blockquote")}
+            label="Blockquote"
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+            <QuotesIcon size={14} />
+          </ToolbarButton>
         </div>
-      )}
+      </div>
       <EditorContent editor={editor} className={styles.editor} />
     </div>
   );

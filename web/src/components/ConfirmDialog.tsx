@@ -1,11 +1,12 @@
 // Controlled confirm dialog (Radix AlertDialog) for destructive/discarding
 // actions: tab close with unsaved changes, world delete, type delete.
 
-import { AlertDialog } from 'radix-ui';
-import type { ReactNode } from 'react';
-import { Button } from './Button';
-import dialogStyles from './Dialog.module.css';
-import styles from './ConfirmDialog.module.css';
+import { AlertDialog } from "radix-ui";
+import type { ReactNode } from "react";
+import { Button } from "./Button";
+import { getOverlayContainer } from "../lib/overlay";
+import dialogStyles from "./Dialog.module.css";
+import styles from "./ConfirmDialog.module.css";
 
 export function ConfirmDialog({
   open,
@@ -13,7 +14,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel = "Cancel",
   danger,
   onConfirm,
   confirmTestId,
@@ -30,9 +31,11 @@ export function ConfirmDialog({
   confirmTestId?: string;
   cancelTestId?: string;
 }) {
+  const portalContainer = getOverlayContainer();
+
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
-      <AlertDialog.Portal>
+      <AlertDialog.Portal container={portalContainer}>
         <AlertDialog.Overlay className={dialogStyles.overlay} />
         <AlertDialog.Content className={dialogStyles.content}>
           <AlertDialog.Title className={dialogStyles.title}>{title}</AlertDialog.Title>
@@ -45,10 +48,9 @@ export function ConfirmDialog({
             </AlertDialog.Cancel>
             <AlertDialog.Action asChild>
               <Button
-                variant={danger ? 'danger' : 'primary'}
+                variant={danger ? "danger" : "primary"}
                 onClick={onConfirm}
-                data-testid={confirmTestId}
-              >
+                data-testid={confirmTestId}>
                 {confirmLabel}
               </Button>
             </AlertDialog.Action>

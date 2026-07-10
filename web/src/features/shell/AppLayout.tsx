@@ -77,6 +77,7 @@ export function AppLayout({
       }}>
       <div
         ref={shellRef}
+        data-overlay-root="shell"
         className={[styles.shell, isFocusMode ? styles.focusMode : ""].filter(Boolean).join(" ")}>
         {!isFocusMode && (
           <Header

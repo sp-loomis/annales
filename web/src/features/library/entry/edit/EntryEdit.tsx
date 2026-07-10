@@ -22,6 +22,7 @@ import { AddRelationPopover } from "../../relations/AddRelationPopover";
 import { BlockCompositor } from "./BlockCompositor";
 import { useSaveEntry, cancelDraft } from "./useSaveEntry";
 import { WorldIcon } from "../../../../components/icons/WorldIcon";
+import { getOverlayContainer } from "../../../../lib/overlay";
 import { TID } from "../../../../testids";
 import entryStyles from "../EntryView.module.css";
 import styles from "./EntryEdit.module.css";
@@ -60,6 +61,7 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
   const [tagInput, setTagInput] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
+  const portalContainer = getOverlayContainer();
   const { save, saving, errors } = useSaveEntry(entry.id, worldId, onExit);
 
   const { data: types } = useQuery({
@@ -124,7 +126,7 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
                 <CaretDown size={12} />
               </button>
             </Popover.Trigger>
-            <Popover.Portal>
+            <Popover.Portal container={portalContainer}>
               <Popover.Content className={styles.typePopover} sideOffset={6} align="start">
                 <div className={styles.typeList}>
                   {(types?.items ?? []).map((t) => (
@@ -149,7 +151,7 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
                   <DotsThree size={18} weight="bold" />
                 </IconButton>
               </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
+              <DropdownMenu.Portal container={portalContainer}>
                 <DropdownMenu.Content className={styles.menu} align="end" sideOffset={4}>
                   <DropdownMenu.Item
                     className={styles.menuItemDanger}
