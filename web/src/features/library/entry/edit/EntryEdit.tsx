@@ -3,27 +3,52 @@
 // and Save / Cancel. Save orchestrates the API fan-out (useSaveEntry); Cancel
 // discards the draft and compensates eagerly-created artifacts.
 
-import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { DropdownMenu } from 'radix-ui';
-import { DotsThree, X } from '@phosphor-icons/react';
-import { keys } from '../../../../api/keys';
-import { deleteEntry, deleteRelation, listEntryTypes } from '../../../../api/endpoints';
-import type { EntryDetail } from '../../../../api/types';
-import { useDraftStore } from '../../../../stores/draftStore';
-import { useWorkspaceStore } from '../../../../stores/workspaceStore';
-import { Button } from '../../../../components/Button';
-import { IconButton } from '../../../../components/IconButton';
-import { TextInput } from '../../../../components/TextInput';
-import { Chip } from '../../../../components/Chip';
-import { ConfirmDialog } from '../../../../components/ConfirmDialog';
-import { RelationBlock } from '../read/RelationBlock';
-import { AddRelationPopover } from '../../relations/AddRelationPopover';
-import { BlockCompositor } from './BlockCompositor';
-import { useSaveEntry, cancelDraft } from './useSaveEntry';
-import { TID } from '../../../../testids';
-import entryStyles from '../EntryView.module.css';
-import styles from './EntryEdit.module.css';
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { DropdownMenu, Popover } from "radix-ui";
+import { CaretDown, DotsThree, X } from "@phosphor-icons/react";
+import { keys } from "../../../../api/keys";
+import { deleteEntry, deleteRelation, listEntryTypes } from "../../../../api/endpoints";
+import type { EntryDetail, EntryType } from "../../../../api/types";
+import { useDraftStore } from "../../../../stores/draftStore";
+import { useWorkspaceStore } from "../../../../stores/workspaceStore";
+import { Button } from "../../../../components/Button";
+import { IconButton } from "../../../../components/IconButton";
+import { TextInput } from "../../../../components/TextInput";
+import { Chip } from "../../../../components/Chip";
+import { ConfirmDialog } from "../../../../components/ConfirmDialog";
+import { RelationBlock } from "../read/RelationBlock";
+import { AddRelationPopover } from "../../relations/AddRelationPopover";
+import { BlockCompositor } from "./BlockCompositor";
+import { useSaveEntry, cancelDraft } from "./useSaveEntry";
+import { WorldIcon } from "../../../../components/icons/WorldIcon";
+import { TID } from "../../../../testids";
+import entryStyles from "../EntryView.module.css";
+import styles from "./EntryEdit.module.css";
+
+type EntryTypeOption = Pick<EntryType, "id" | "name" | "slug" | "iconName" | "iconWeight">;
+
+function TypeRow({
+  type,
+  active,
+  onSelect,
+}: {
+  type: EntryTypeOption;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={[styles.typeRow, active ? styles.activeTypeRow : ""].filter(Boolean).join(" ")}
+      onClick={onSelect}>
+      <span className={styles.typeRowIcon}>
+        <WorldIcon iconName={type.iconName} iconWeight={type.iconWeight} size={13} />
+      </span>
+      <span className={styles.typeName}>{type.name}</span>
+    </button>
+  );
+}
 
 export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () => void }) {
   const worldId = useWorkspaceStore((s) => s.activeWorldId);
@@ -32,15 +57,23 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
   const updateDraft = useDraftStore((s) => s.updateDraft);
   const queryClient = useQueryClient();
 
-  const [tagInput, setTagInput] = useState('');
+  const [tagInput, setTagInput] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [typeOpen, setTypeOpen] = useState(false);
   const { save, saving, errors } = useSaveEntry(entry.id, worldId, onExit);
 
   const { data: types } = useQuery({
-    queryKey: worldId ? keys.entryTypes(worldId) : ['entry-types', 'none'],
+    queryKey: worldId ? keys.entryTypes(worldId) : ["entry-types", "none"],
     queryFn: () => listEntryTypes(worldId!),
-    enabled: worldId !== null,
+    enabled: worldId !== null && typeOpen,
   });
+  const cachedTypes = worldId
+    ? queryClient.getQueryData<{ items: EntryTypeOption[] }>(keys.entryTypes(worldId))
+    : undefined;
+  const selectedType =
+    types?.items.find((t) => t.slug === draft.typeSlug) ??
+    cachedTypes?.items.find((t) => t.slug === draft.typeSlug);
+  const selectedTypeLabel = (selectedType?.name ?? draft.typeSlug) || "Select type";
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteEntry(entry.id),
@@ -49,7 +82,7 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
       closeTab(entry.id);
       if (worldId) {
         await queryClient.invalidateQueries({ queryKey: keys.entries(worldId) });
-        await queryClient.invalidateQueries({ queryKey: ['worlds', worldId, 'search'] });
+        await queryClient.invalidateQueries({ queryKey: ["worlds", worldId, "search"] });
       }
     },
   });
@@ -64,29 +97,51 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
   const addTag = () => {
     const tag = tagInput.trim();
     if (!tag || draft.tags.includes(tag)) {
-      setTagInput('');
+      setTagInput("");
       return;
     }
     updateDraft(entry.id, (d) => ({ ...d, tags: [...d.tags, tag] }));
-    setTagInput('');
+    setTagInput("");
   };
 
   return (
     <article className={entryStyles.entry}>
       <header className={styles.header}>
         <div className={styles.headerTop}>
-          <select
-            className={styles.typeSelect}
-            value={draft.typeSlug}
-            onChange={(e) => updateDraft(entry.id, (d) => ({ ...d, typeSlug: e.target.value }))}
-            data-testid={TID.entryTypeBadge}
-          >
-            {(types?.items ?? []).map((t) => (
-              <option key={t.id} value={t.slug}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+          <Popover.Root open={typeOpen} onOpenChange={setTypeOpen}>
+            <Popover.Trigger asChild>
+              <button type="button" className={styles.typeTrigger} data-testid={TID.entryTypeBadge}>
+                <span className={styles.typeTriggerInner}>
+                  <span className={styles.typeTriggerIcon}>
+                    <WorldIcon
+                      iconName={selectedType?.iconName}
+                      iconWeight={selectedType?.iconWeight}
+                      size={13}
+                    />
+                  </span>
+                  <span className={styles.typeTriggerLabel}>{selectedTypeLabel}</span>
+                </span>
+                <CaretDown size={12} />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content className={styles.typePopover} sideOffset={6} align="start">
+                <div className={styles.typeList}>
+                  {(types?.items ?? []).map((t) => (
+                    <TypeRow
+                      key={t.id}
+                      type={t}
+                      active={t.slug === draft.typeSlug}
+                      onSelect={() => {
+                        updateDraft(entry.id, (d) => ({ ...d, typeSlug: t.slug }));
+                        setTypeOpen(false);
+                      }}
+                    />
+                  ))}
+                </div>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
           <div className={styles.headerActions}>
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
@@ -99,23 +154,26 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
                   <DropdownMenu.Item
                     className={styles.menuItemDanger}
                     onSelect={() => setDeleteOpen(true)}
-                    data-testid={TID.entryDelete}
-                  >
+                    data-testid={TID.entryDelete}>
                     Delete entry
                   </DropdownMenu.Item>
                 </DropdownMenu.Content>
               </DropdownMenu.Portal>
             </DropdownMenu.Root>
-            <Button onClick={() => { cancelDraft(entry.id); onExit(); }} data-testid={TID.entryCancel}>
+            <Button
+              onClick={() => {
+                cancelDraft(entry.id);
+                onExit();
+              }}
+              data-testid={TID.entryCancel}>
               Cancel
             </Button>
             <Button
               variant="primary"
               onClick={() => void save()}
               disabled={saving}
-              data-testid={TID.entrySave}
-            >
-              {saving ? 'Saving…' : 'Save'}
+              data-testid={TID.entrySave}>
+              {saving ? "Saving…" : "Save"}
             </Button>
           </div>
         </div>
@@ -132,8 +190,7 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
               key={tag}
               onClick={() =>
                 updateDraft(entry.id, (d) => ({ ...d, tags: d.tags.filter((t) => t !== tag) }))
-              }
-            >
+              }>
               {tag}
               <X size={10} />
             </Chip>
@@ -144,7 +201,7 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === "Enter") {
                 e.preventDefault();
                 addTag();
               }
@@ -155,7 +212,7 @@ export function EntryEdit({ entry, onExit }: { entry: EntryDetail; onExit: () =>
         </div>
         {errors.length > 0 && (
           <div className={styles.errors}>
-            Some changes failed to save — fix and save again. {errors.join('; ')}
+            Some changes failed to save — fix and save again. {errors.join("; ")}
           </div>
         )}
       </header>

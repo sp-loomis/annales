@@ -26,13 +26,23 @@
 .typeBadge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--accent-soft);
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-m);
+  color: var(--text-2);
+}
+
+.typeBadgeIcon {
+  display: inline-flex;
+  flex-shrink: 0;
   color: var(--accent-text);
-  font-size: 12px;
+}
+
+.typeBadgeLabel {
+  font-family: var(--font-world);
+  font-size: 16px;
   font-weight: 600;
+  color: var(--accent-text);
 }
 
 .titleRow {

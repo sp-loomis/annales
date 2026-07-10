@@ -2,38 +2,38 @@
 // the draft-backed editor (EntryEdit). Only the active tab is mounted — dirty
 // drafts survive unmount because they live in draftStore.
 
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { PencilSimple } from '@phosphor-icons/react';
-import { keys } from '../../../api/keys';
-import { getEntry, listEntryTypes } from '../../../api/endpoints';
-import { ApiError } from '../../../api/client';
-import type { EntryDetail } from '../../../api/types';
-import { useWorkspaceStore } from '../../../stores/workspaceStore';
-import { useDraftStore } from '../../../stores/draftStore';
-import { Button } from '../../../components/Button';
-import { Chip } from '../../../components/Chip';
-import { Spinner } from '../../../components/Spinner';
-import { EmptyState } from '../../../components/EmptyState';
-import { WorldIcon } from '../../../components/icons/WorldIcon';
-import { ProseRenderer } from './read/ProseRenderer';
-import { ImageBlockRead } from './read/ImageBlockRead';
-import { SketchPreview } from './read/SketchPreview';
-import { RelationBlock } from './read/RelationBlock';
-import { EntryEdit } from './edit/EntryEdit';
-import { TID } from '../../../testids';
-import styles from './EntryView.module.css';
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { PencilSimple } from "@phosphor-icons/react";
+import { keys } from "../../../api/keys";
+import { getEntry, listEntryTypes } from "../../../api/endpoints";
+import { ApiError } from "../../../api/client";
+import type { EntryDetail } from "../../../api/types";
+import { useWorkspaceStore } from "../../../stores/workspaceStore";
+import { useDraftStore } from "../../../stores/draftStore";
+import { Button } from "../../../components/Button";
+import { Chip } from "../../../components/Chip";
+import { Spinner } from "../../../components/Spinner";
+import { EmptyState } from "../../../components/EmptyState";
+import { WorldIcon } from "../../../components/icons/WorldIcon";
+import { ProseRenderer } from "./read/ProseRenderer";
+import { ImageBlockRead } from "./read/ImageBlockRead";
+import { SketchPreview } from "./read/SketchPreview";
+import { RelationBlock } from "./read/RelationBlock";
+import { EntryEdit } from "./edit/EntryEdit";
+import { TID } from "../../../testids";
+import styles from "./EntryView.module.css";
 
 type OrderedBlock =
-  | { kind: 'section'; id: string; order: number }
-  | { kind: 'image'; id: string; order: number }
-  | { kind: 'sketch'; id: string; order: number };
+  | { kind: "section"; id: string; order: number }
+  | { kind: "image"; id: string; order: number }
+  | { kind: "sketch"; id: string; order: number };
 
 function orderedBlocks(entry: EntryDetail): OrderedBlock[] {
   return [
-    ...entry.sections.map((s) => ({ kind: 'section' as const, id: s.id, order: s.order })),
-    ...entry.images.map((i) => ({ kind: 'image' as const, id: i.id, order: i.order })),
-    ...entry.sketches.map((s) => ({ kind: 'sketch' as const, id: s.id, order: s.order })),
+    ...entry.sections.map((s) => ({ kind: "section" as const, id: s.id, order: s.order })),
+    ...entry.images.map((i) => ({ kind: "image" as const, id: i.id, order: i.order })),
+    ...entry.sketches.map((s) => ({ kind: "sketch" as const, id: s.id, order: s.order })),
   ].sort((a, b) => a.order - b.order);
 }
 
@@ -44,13 +44,17 @@ export function EntryView({ entryId }: { entryId: string }) {
   const startDraft = useDraftStore((s) => s.startDraft);
   const [editing, setEditing] = useState(hasDraft);
 
-  const { data: entry, isLoading, error } = useQuery({
+  const {
+    data: entry,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: keys.entry(entryId),
     queryFn: () => getEntry(entryId),
   });
 
   const { data: types } = useQuery({
-    queryKey: worldId ? keys.entryTypes(worldId) : ['entry-types', 'none'],
+    queryKey: worldId ? keys.entryTypes(worldId) : ["entry-types", "none"],
     queryFn: () => listEntryTypes(worldId!),
     enabled: worldId !== null,
   });
@@ -88,8 +92,10 @@ export function EntryView({ entryId }: { entryId: string }) {
       <header className={styles.header}>
         <div className={styles.meta}>
           <span className={styles.typeBadge}>
-            <WorldIcon iconName={type?.iconName} iconWeight={type?.iconWeight} size={14} />
-            {type?.name ?? entry.type}
+            <span className={styles.typeBadgeIcon}>
+              <WorldIcon iconName={type?.iconName} iconWeight={type?.iconWeight} size={13} />
+            </span>
+            <span className={styles.typeBadgeLabel}>{type?.name ?? entry.type}</span>
           </span>
           {entry.tags.map((tag) => (
             <Chip key={tag} asLabel>
@@ -104,8 +110,7 @@ export function EntryView({ entryId }: { entryId: string }) {
               startDraft(entry);
               setEditing(true);
             }}
-            data-testid={TID.entryEdit}
-          >
+            data-testid={TID.entryEdit}>
             <PencilSimple size={14} />
             Edit
           </Button>
@@ -116,7 +121,7 @@ export function EntryView({ entryId }: { entryId: string }) {
         <EmptyState message="This page is blank. Edit the entry to add a first section." />
       ) : (
         blocks.map((block) => {
-          if (block.kind === 'section') {
+          if (block.kind === "section") {
             const section = sectionById.get(block.id)!;
             return (
               <div key={block.id} className={styles.sectionBlock}>
@@ -125,7 +130,7 @@ export function EntryView({ entryId }: { entryId: string }) {
               </div>
             );
           }
-          if (block.kind === 'image') {
+          if (block.kind === "image") {
             const image = imageById.get(block.id)!;
             return <ImageBlockRead key={block.id} imageId={image.id} label={image.label} />;
           }

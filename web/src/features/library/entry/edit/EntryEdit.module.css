@@ -12,14 +12,97 @@
   gap: 12px;
 }
 
-.typeSelect {
-  padding: 3px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--accent-soft);
+.typeTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--radius-m);
+  background: none;
+  cursor: pointer;
+  color: var(--text-2);
+}
+
+.typeTrigger:hover {
+  background: var(--surface-1);
+}
+
+.typeTriggerInner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.typeTriggerIcon {
+  display: inline-flex;
+  flex-shrink: 0;
   color: var(--accent-text);
-  font-size: 12px;
+}
+
+.typeTriggerLabel {
+  font-family: var(--font-world);
+  font-size: 16px;
   font-weight: 600;
+  color: var(--accent-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.typePopover {
+  min-width: 240px;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-popover);
+  padding: 6px;
+  z-index: 20;
+}
+
+.typeList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.typeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-m);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.typeRow:hover {
+  background: var(--surface-1);
+}
+
+.activeTypeRow {
+  background: var(--accent-soft);
+}
+
+.typeRowIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-2);
+}
+
+.typeName {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .headerActions {
