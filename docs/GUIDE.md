@@ -21,16 +21,42 @@ npx prisma generate
 cp .env.example .env                              # npm run dev loads this automatically
 ```
 
-Buckets (`sheaf-dev`, `sheaf-test`) are created — versioning enabled — by a
+Buckets (`sheaf-dev`, `sheaf-test`, `sheaf-local`) are created — versioning enabled — by a
 LocalStack boot hook (`docker/localstack-init.sh`) on every container start;
 community LocalStack keeps S3 state in memory, so they'd otherwise vanish on
 restart. Postgres data survives restarts via the `sheaf-pgdata` volume.
+
+## Local Mode (Isolated Data)
+
+Use local mode when you want to use the app as a real user without touching
+your normal dev data.
+
+```sh
+npm run local
+```
+
+This starts both servers and keeps data isolated:
+
+- API: `http://localhost:3001`
+- Frontend: `http://localhost:5174`
+- Database: `sheaf_local`
+- Bucket: `sheaf-local`
+
+Notes:
+
+- `npm run dev` and `npm run dev:web` remain unchanged (`:3000`/`:5173`,
+  `sheaf`, `sheaf-dev`).
+- `npm run local` ensures `sheaf_local` and `sheaf-local` exist, applies
+  migrations to `sheaf_local`, then starts both dev servers.
+- If Podman containers are not running, start them first with
+  `npm run compose:up`.
 
 ## Everyday commands
 
 ```sh
 npm run dev          # API on http://localhost:3000, restarts on save
 npm run dev:web      # frontend on http://localhost:5173 (needs the API up too)
+npm run local        # isolated API+frontend on :3001 + :5174
 npm test             # 360 contract + unit tests (containers must be up)
 npm run typecheck    # backend; `npm run typecheck -w web` for the frontend
 npm run compose:down # stop containers (data volumes persist)

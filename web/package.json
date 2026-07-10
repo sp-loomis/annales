@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "VITE_API_PROXY_TARGET=http://localhost:3001 vite --port 5174",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --noEmit",
     "preview": "vite preview"

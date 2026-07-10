@@ -13,6 +13,15 @@
   min-width: 0;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-left: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
 .tab {
   display: flex;
   align-items: center;

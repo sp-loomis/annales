@@ -29,10 +29,11 @@ export function InsertPicker({
           <button
             type="button"
             className={styles.plus}
-            aria-label="Insert block"
+            aria-label="Add item"
             data-testid={TID.insertBlock(afterKey)}
           >
-            <Plus size={12} />
+            <Plus size={13} />
+            <span className={styles.label}>Add Item</span>
           </button>
         </Popover.Trigger>
         <Popover.Portal>

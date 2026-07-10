@@ -33,7 +33,7 @@ is always legal.
 prisma/
   schema.prisma          data model; Unsupported("box") / Unsupported("tsvector")
   migrations/            one init migration; GiST/GIN index DDL appended by hand
-docker/init-db.sql       creates the sheaf_test database in the postgres container
+docker/init-db.sql       creates the sheaf_test and sheaf_local databases in the postgres container
 docker-compose.yml       postgres:16 (:5433) + LocalStack S3 (:4566)
 src/
   server.ts              entry point — buildApp() + listen
@@ -210,6 +210,8 @@ BC/AD calendar) that the contract tests reuse.
   so tests keep working across schema refactors.
 - `tests/global-setup.ts` migrates `sheaf_test` and creates the versioned
   `sheaf-test` bucket once per run.
+- `docker/localstack-init.sh` recreates versioned `sheaf-dev`, `sheaf-test`,
+  and `sheaf-local` buckets on container startup.
 - Files run serially (`fileParallelism: false`) because they share the DB;
   each file truncates all tables per test.
 - The upload-expiry ("failed") path is tested with a second app instance

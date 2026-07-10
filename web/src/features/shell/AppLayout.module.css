@@ -2,11 +2,29 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: var(--surface-0);
+}
+
+.shell:fullscreen,
+.shell:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  background: var(--surface-0);
+}
+
+.shell:fullscreen::backdrop,
+.shell:-webkit-full-screen::backdrop {
+  background: var(--surface-0);
 }
 
 .row {
   display: flex;
   flex: 1;
+  min-height: 0;
+}
+
+.rail {
+  display: flex;
   min-height: 0;
 }
 
@@ -59,4 +77,11 @@
 .expandButton:hover {
   color: var(--text-1);
   background: var(--surface-2);
+}
+
+.focusMode .rail,
+.focusMode .sidebarPanel,
+.focusMode .resizeHandle,
+.focusMode .expandButton {
+  display: none;
 }

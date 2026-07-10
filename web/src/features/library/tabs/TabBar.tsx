@@ -6,15 +6,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { DropdownMenu } from 'radix-ui';
-import { CaretDown, Circle, X } from '@phosphor-icons/react';
+import { ArrowsInSimple, ArrowsOutSimple, CaretDown, Circle, CornersIn, X } from '@phosphor-icons/react';
 import { keys } from '../../../api/keys';
 import { getEntry, listEntryTypes } from '../../../api/endpoints';
 import { useWorkspaceStore, selectWorkspace } from '../../../stores/workspaceStore';
 import { useDraftStore, useIsDirty } from '../../../stores/draftStore';
 import { isDraftDirty } from '../entry/edit/draft';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { IconButton } from '../../../components/IconButton';
 import { WorldIcon } from '../../../components/icons/WorldIcon';
 import { TID } from '../../../testids';
+import { useShellChromeControls } from '../../shell/ShellChromeContext';
 import styles from './TabBar.module.css';
 
 function Tab({
@@ -65,6 +67,7 @@ function Tab({
 }
 
 export function TabBar() {
+  const shellControls = useShellChromeControls();
   const openEntryIds = useWorkspaceStore((s) => selectWorkspace(s).openEntryIds);
   const activeEntryId = useWorkspaceStore((s) => selectWorkspace(s).activeEntryId);
   const setActiveTab = useWorkspaceStore((s) => s.setActiveTab);
@@ -85,7 +88,7 @@ export function TabBar() {
     return () => observer.disconnect();
   }, [openEntryIds.length]);
 
-  if (openEntryIds.length === 0) return null;
+  if (openEntryIds.length === 0 && !shellControls?.isFocusMode) return null;
 
   const requestClose = (entryId: string) => {
     const draft = useDraftStore.getState().drafts[entryId];
@@ -101,6 +104,12 @@ export function TabBar() {
     ? (queryClient.getQueryData<{ title: string }>(keys.entry(pendingClose))?.title ?? 'this entry')
     : '';
 
+  const fullscreenLabel = shellControls?.isFullscreen
+    ? 'Exit fullscreen'
+    : shellControls?.isFullscreenSupported
+      ? 'Enter fullscreen'
+      : 'Fullscreen unavailable in this browser';
+
   return (
     <div className={styles.bar}>
       <div className={styles.row} ref={rowRef}>
@@ -114,6 +123,29 @@ export function TabBar() {
           />
         ))}
       </div>
+      {shellControls?.isFocusMode && (
+        <div className={styles.actions}>
+          <IconButton
+            label="Exit focus mode"
+            onClick={shellControls.toggleFocus}
+            active
+            aria-pressed
+            data-testid={TID.focusButton}
+          >
+            <CornersIn size={16} />
+          </IconButton>
+          <IconButton
+            label={fullscreenLabel}
+            onClick={shellControls.toggleFullscreen}
+            active={shellControls.isFullscreen}
+            aria-pressed={shellControls.isFullscreen}
+            disabled={!shellControls.isFullscreenSupported}
+            data-testid={TID.fullscreenButton}
+          >
+            {shellControls.isFullscreen ? <ArrowsInSimple size={16} /> : <ArrowsOutSimple size={16} />}
+          </IconButton>
+        </div>
+      )}
       {overflowing && (
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>

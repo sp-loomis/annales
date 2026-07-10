@@ -36,7 +36,7 @@ export function BlockFrame({
           data-testid={TID.blockDragHandle(blockKey)}
           {...attributes}
           {...listeners}>
-          <DotsSixVertical size={14} />
+          <DotsSixVertical size={16} weight="bold" />
         </button>
       </div>
       <div className={styles.content}>

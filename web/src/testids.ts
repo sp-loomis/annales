@@ -7,6 +7,8 @@ export const TID = {
   worldSwitcherItem: (worldId: string) => `world-switcher-item-${worldId}`,
   worldSwitcherNew: "world-switcher-new",
   settingsButton: "settings-button",
+  focusButton: "focus-button",
+  fullscreenButton: "fullscreen-button",
   modeRailLibrary: "mode-rail-library",
   sidebarExpand: "sidebar-expand",
   sidebarResizeHandle: "sidebar-resize-handle",

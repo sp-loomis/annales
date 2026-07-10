@@ -19,7 +19,14 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Copy, SplitVertical, TextT, TextTSlash, Trash, ArrowsMerge } from "@phosphor-icons/react";
+import {
+  ArrowsInLineVerticalIcon,
+  Copy,
+  SplitVertical,
+  TextT,
+  TextTSlash,
+  Trash,
+} from "@phosphor-icons/react";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import type { Editor } from "@tiptap/core";
 import { createArtifact, finalizeArtifact, uploadToPresigned } from "../../../../api/endpoints";
@@ -365,43 +372,59 @@ export function BlockCompositor({ entryId }: { entryId: string }) {
                     />
                   )}
                 </BlockFrame>
-                {canMerge && (
-                  <div className={styles.mergeRow}>
-                    <button
-                      type="button"
-                      className={styles.mergeButton}
-                      onClick={() =>
-                        mergeWithNext(
-                          block as BlockDraft & { kind: "section" },
-                          nextBlock as BlockDraft & { kind: "section" }
-                        )
-                      }
-                      data-testid={TID.blockMerge(block.key)}>
-                      <ArrowsMerge size={11} />
-                      Merge sections
-                    </button>
+                <div className={styles.interstitial}>
+                  <div className={styles.interstitialLine} aria-hidden="true" />
+                  <div
+                    className={[
+                      styles.interstitialControls,
+                      canMerge ? styles.interstitialControlsWithMerge : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}>
+                    <InsertPicker
+                      afterKey={block.key}
+                      onSection={() => insertSection(block.key)}
+                      onImage={(file) => void insertImage(block.key, file)}
+                      onSketch={() => void insertSketch(block.key)}
+                    />
+                    {canMerge && (
+                      <button
+                        type="button"
+                        className={styles.mergeButton}
+                        onClick={() =>
+                          mergeWithNext(
+                            block as BlockDraft & { kind: "section" },
+                            nextBlock as BlockDraft & { kind: "section" }
+                          )
+                        }
+                        data-testid={TID.blockMerge(block.key)}>
+                        <ArrowsInLineVerticalIcon size={12} />
+                        Merge Sections
+                      </button>
+                    )}
                   </div>
-                )}
-                <InsertPicker
-                  afterKey={block.key}
-                  onSection={() => insertSection(block.key)}
-                  onImage={(file) => void insertImage(block.key, file)}
-                  onSketch={() => void insertSketch(block.key)}
-                />
+                </div>
               </div>
             );
           })}
         </SortableContext>
       </DndContext>
       {blocks.length === 0 && (
-        <p className={styles.emptyHint}>Add a section to begin — the + below is the way in.</p>
+        <>
+          <p className={styles.emptyHint}>Add a section to begin — the + below is the way in.</p>
+          <div className={styles.interstitial}>
+            <div className={styles.interstitialLine} aria-hidden="true" />
+            <div className={styles.interstitialControls}>
+              <InsertPicker
+                afterKey="end"
+                onSection={() => insertSection(null)}
+                onImage={(file) => void insertImage(null, file)}
+                onSketch={() => void insertSketch(null)}
+              />
+            </div>
+          </div>
+        </>
       )}
-      <InsertPicker
-        afterKey="end"
-        onSection={() => insertSection(null)}
-        onImage={(file) => void insertImage(null, file)}
-        onSketch={() => void insertSketch(null)}
-      />
     </div>
   );
 }
