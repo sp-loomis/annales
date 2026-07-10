@@ -23,7 +23,7 @@ Storage (src/lib/storage.ts) ───────────► S3 / LocalStac
 
 Core rule (from [STACK.md](STACK.md)): files are the source of truth for all
 creative payload. The DB never stores payload inline — only metadata and
-fields *derived from* files at finalize time (bbox, tsvector, extracted
+fields _derived from_ files at finalize time (bbox, tsvector, extracted
 text, cached GeoJSON properties). Rebuilding those derived fields from files
 is always legal.
 
@@ -33,7 +33,7 @@ is always legal.
 prisma/
   schema.prisma          data model; Unsupported("box") / Unsupported("tsvector")
   migrations/            one init migration; GiST/GIN index DDL appended by hand
-docker/init-db.sql       creates the sheaf_test database in the postgres container
+docker/init-db.sql       creates the sheaf_test and sheaf_local databases in the postgres container
 docker-compose.yml       postgres:16 (:5433) + LocalStack S3 (:4566)
 src/
   server.ts              entry point — buildApp() + listen
@@ -83,7 +83,7 @@ requests.http            every endpoint as a REST-client scratchpad
    params/query/body. Failures never reach handlers — the global error
    handler converts them to `400 { error: { code: "VALIDATION" } }`.
 2. The handler does existence checks itself (thrown `AppError`s carry status
-   + code) — e.g. parent entry lookup, cross-world guards.
+   - code) — e.g. parent entry lookup, cross-world guards.
 3. Data access goes through `app.prisma` (decorated `PrismaClient`); file
    operations through `app.store` (decorated `Storage`).
 4. Any thrown `AppError` becomes the error envelope; unexpected errors log
@@ -99,13 +99,13 @@ Documents, images, sketches, and geometries share one presigned-upload
 lifecycle, registered from a single `KindConfig` table. Each kind supplies
 only what differs:
 
-| Hook | documents | images | sketches | geometries |
-|---|---|---|---|---|
-| create body | `role`, `label?` | `contentType`, `label?` | `label?` | `crsId`, `label?` |
-| `prepareCreate` | — | — | — | CRS exists + its globe's world matches the entry |
-| `finalize` validation | UTF-8 | magic bytes match declared type | Excalidraw scene shape | GeoJSON Feature/FeatureCollection |
-| `finalize` derivation | tsvector from text | webp thumbnail (sharp, ≤512px) | tsvector from scene text | canonical lng/lat bboxes via d3-geo (raw SQL) + cached properties |
-| extra response fields | `role` | `contentType`, `thumbnail` | — | `crsId`, `bboxes`, `properties` |
+| Hook                  | documents          | images                          | sketches                 | geometries                                                        |
+| --------------------- | ------------------ | ------------------------------- | ------------------------ | ----------------------------------------------------------------- |
+| create body           | `role`, `label?`   | `contentType`, `label?`         | `label?`                 | `crsId`, `label?`                                                 |
+| `prepareCreate`       | —                  | —                               | —                        | CRS exists + its globe's world matches the entry                  |
+| `finalize` validation | UTF-8              | magic bytes match declared type | Excalidraw scene shape   | GeoJSON Feature/FeatureCollection                                 |
+| `finalize` derivation | tsvector from text | webp thumbnail (sharp, ≤512px)  | tsvector from scene text | canonical lng/lat bboxes via d3-geo (raw SQL) + cached properties |
+| extra response fields | `role`             | `contentType`, `thumbnail`      | —                        | `crsId`, `bboxes`, `properties`                                   |
 
 Status is **stored** as `pending`/`ready` but **served** as
 `pending`/`ready`/`failed`: `failed` is computed at read time
@@ -210,6 +210,8 @@ BC/AD calendar) that the contract tests reuse.
   so tests keep working across schema refactors.
 - `tests/global-setup.ts` migrates `sheaf_test` and creates the versioned
   `sheaf-test` bucket once per run.
+- `docker/localstack-init.sh` recreates versioned `sheaf-dev`, `sheaf-test`,
+  and `sheaf-local` buckets on container startup.
 - Files run serially (`fileParallelism: false`) because they share the DB;
   each file truncates all tables per test.
 - The upload-expiry ("failed") path is tested with a second app instance

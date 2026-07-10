@@ -1,0 +1,154 @@
+.bar {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-0);
+  flex-shrink: 0;
+}
+
+.row {
+  display: flex;
+  flex: 1;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-left: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-right: 1px solid var(--border);
+  position: relative;
+  flex-shrink: 0;
+  max-width: 200px;
+}
+
+.tab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: transparent;
+}
+
+.active::after {
+  background: var(--accent);
+}
+
+.active {
+  background: var(--surface-1);
+}
+
+.tabLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px 8px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  min-width: 0;
+  color: var(--text-2);
+}
+
+.tabTitle {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0 6px 0 2px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-s);
+  background: none;
+  cursor: pointer;
+  color: var(--text-2);
+  position: relative;
+}
+
+.tabClose:hover {
+  background: var(--surface-2);
+  color: var(--text-1);
+}
+
+.dirtyDot {
+  color: var(--accent);
+}
+
+/* Dirty tab: show the dot, reveal the × on hover. */
+.closeIconDirty {
+  display: none;
+}
+
+.tabClose:hover .closeIconDirty {
+  display: block;
+}
+
+.tabClose:hover .dirtyDot {
+  display: none;
+}
+
+.overflowTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  border: none;
+  border-left: 1px solid var(--border);
+  background: none;
+  cursor: pointer;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.overflowTrigger:hover {
+  background: var(--surface-1);
+}
+
+.overflowMenu {
+  min-width: 200px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-popover);
+  padding: 4px;
+  z-index: 20;
+}
+
+.overflowItem {
+  padding: 6px 10px;
+  border-radius: var(--radius-s);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overflowItem[data-highlighted] {
+  background: var(--surface-1);
+}

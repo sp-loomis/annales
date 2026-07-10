@@ -1,0 +1,87 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface-0);
+}
+
+.shell:fullscreen,
+.shell:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  background: var(--surface-0);
+}
+
+.shell:fullscreen::backdrop,
+.shell:-webkit-full-screen::backdrop {
+  background: var(--surface-0);
+}
+
+.row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.rail {
+  display: flex;
+  min-height: 0;
+}
+
+.panels {
+  flex: 1;
+}
+
+.sidebarPanel {
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.bodyPanel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.resizeHandle {
+  width: 3px;
+  background: var(--border);
+  transition: background 120ms var(--ease);
+  cursor: col-resize;
+}
+
+.resizeHandle:hover,
+.resizeHandle[data-resize-handle-active] {
+  background: var(--accent);
+}
+
+.expandButton {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 var(--radius-m) var(--radius-m) 0;
+  background: var(--surface-1);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.expandButton:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+
+.focusMode .rail,
+.focusMode .sidebarPanel,
+.focusMode .resizeHandle,
+.focusMode .expandButton {
+  display: none;
+}

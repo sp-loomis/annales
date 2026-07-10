@@ -1,8 +1,8 @@
-import type { FastifyInstance } from 'fastify';
-import { notFound, validation } from '../lib/errors.js';
-import { deriveStatus, getBboxes, thumbKeyFor } from '../lib/artifact-util.js';
-import { dropEntryIndex } from '../lib/search-index.js';
-import { relationsView } from '../lib/relations-view.js';
+import type { FastifyInstance } from "fastify";
+import { notFound, validation } from "../lib/errors.js";
+import { deriveStatus, getBboxes, thumbKeyFor } from "../lib/artifact-util.js";
+import { dropEntryIndex } from "../lib/search-index.js";
+import { relationsView } from "../lib/relations-view.js";
 
 type EntryWithTags = {
   id: string;
@@ -38,22 +38,22 @@ async function resolveTypeId(app: FastifyInstance, worldId: string, slug: string
 }
 
 const createBody = {
-  type: 'object',
-  required: ['type', 'title'],
+  type: "object",
+  required: ["type", "title"],
   properties: {
-    type: { type: 'string', minLength: 1 },
-    title: { type: 'string', minLength: 1 },
-    tags: { type: 'array', items: { type: 'string', minLength: 1 } },
+    type: { type: "string", minLength: 1 },
+    title: { type: "string", minLength: 1 },
+    tags: { type: "array", items: { type: "string", minLength: 1 } },
   },
 } as const;
 
 export function entryRoutes(app: FastifyInstance): void {
   app.post<{ Params: { worldId: string }; Body: { type: string; title: string; tags?: string[] } }>(
-    '/worlds/:worldId/entries',
+    "/worlds/:worldId/entries",
     { schema: { body: createBody } },
     async (req, reply) => {
       const world = await app.prisma.world.findUnique({ where: { id: req.params.worldId } });
-      if (!world) throw notFound('world', req.params.worldId);
+      if (!world) throw notFound("world", req.params.worldId);
       const typeId = await resolveTypeId(app, world.id, req.body.type);
       const tags = [...new Set(req.body.tags ?? [])];
       const entry = await app.prisma.entry.create({
@@ -73,16 +73,16 @@ export function entryRoutes(app: FastifyInstance): void {
     Params: { worldId: string };
     Querystring: { type?: string; tag?: string; limit?: number; cursor?: string };
   }>(
-    '/worlds/:worldId/entries',
+    "/worlds/:worldId/entries",
     {
       schema: {
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            type: { type: 'string' },
-            tag: { type: 'string' },
-            limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
-            cursor: { type: 'string' },
+            type: { type: "string" },
+            tag: { type: "string" },
+            limit: { type: "integer", minimum: 1, maximum: 200, default: 50 },
+            cursor: { type: "string" },
           },
         },
       },
@@ -91,7 +91,7 @@ export function entryRoutes(app: FastifyInstance): void {
       const { worldId } = req.params;
       const { type, tag, limit = 50, cursor } = req.query;
       const world = await app.prisma.world.findUnique({ where: { id: worldId } });
-      if (!world) throw notFound('world', worldId);
+      if (!world) throw notFound("world", worldId);
 
       const entries = await app.prisma.entry.findMany({
         where: {
@@ -100,7 +100,7 @@ export function entryRoutes(app: FastifyInstance): void {
           ...(tag ? { tags: { some: { tag } } } : {}),
         },
         include: { tags: true, type: true },
-        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         take: limit + 1,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       });
@@ -114,7 +114,7 @@ export function entryRoutes(app: FastifyInstance): void {
     }
   );
 
-  app.get<{ Params: { entryId: string } }>('/entries/:entryId', async (req) => {
+  app.get<{ Params: { entryId: string } }>("/entries/:entryId", async (req) => {
     const entry = await app.prisma.entry.findUnique({
       where: { id: req.params.entryId },
       include: {
@@ -127,7 +127,7 @@ export function entryRoutes(app: FastifyInstance): void {
         dateRanges: true,
       },
     });
-    if (!entry) throw notFound('entry', req.params.entryId);
+    if (!entry) throw notFound("entry", req.params.entryId);
 
     const bboxes = await getBboxes(
       app.prisma,
@@ -140,7 +140,6 @@ export function entryRoutes(app: FastifyInstance): void {
       ...summary(entry),
       sections: [...entry.sections].sort(byOrder).map((s) => ({
         id: s.id,
-        label: s.label,
         order: s.order,
         contentJson: s.contentJson ?? null,
       })),
@@ -179,21 +178,21 @@ export function entryRoutes(app: FastifyInstance): void {
   });
 
   app.patch<{ Params: { entryId: string }; Body: { type?: string; title?: string } }>(
-    '/entries/:entryId',
+    "/entries/:entryId",
     {
       schema: {
         body: {
-          type: 'object',
+          type: "object",
           properties: {
-            type: { type: 'string', minLength: 1 },
-            title: { type: 'string', minLength: 1 },
+            type: { type: "string", minLength: 1 },
+            title: { type: "string", minLength: 1 },
           },
         },
       },
     },
     async (req) => {
       const existing = await app.prisma.entry.findUnique({ where: { id: req.params.entryId } });
-      if (!existing) throw notFound('entry', req.params.entryId);
+      if (!existing) throw notFound("entry", req.params.entryId);
       const typeId =
         req.body.type !== undefined
           ? await resolveTypeId(app, existing.worldId, req.body.type)
@@ -211,19 +210,19 @@ export function entryRoutes(app: FastifyInstance): void {
   );
 
   app.put<{ Params: { entryId: string }; Body: { tags: string[] } }>(
-    '/entries/:entryId/tags',
+    "/entries/:entryId/tags",
     {
       schema: {
         body: {
-          type: 'object',
-          required: ['tags'],
-          properties: { tags: { type: 'array', items: { type: 'string', minLength: 1 } } },
+          type: "object",
+          required: ["tags"],
+          properties: { tags: { type: "array", items: { type: "string", minLength: 1 } } },
         },
       },
     },
     async (req) => {
       const entry = await app.prisma.entry.findUnique({ where: { id: req.params.entryId } });
-      if (!entry) throw notFound('entry', req.params.entryId);
+      if (!entry) throw notFound("entry", req.params.entryId);
       const tags = [...new Set(req.body.tags)];
       await app.prisma.$transaction([
         app.prisma.entryTag.deleteMany({ where: { entryId: entry.id } }),
@@ -233,12 +232,12 @@ export function entryRoutes(app: FastifyInstance): void {
     }
   );
 
-  app.delete<{ Params: { entryId: string } }>('/entries/:entryId', async (req, reply) => {
+  app.delete<{ Params: { entryId: string } }>("/entries/:entryId", async (req, reply) => {
     const entry = await app.prisma.entry.findUnique({
       where: { id: req.params.entryId },
       include: { images: true, sketches: true, geometries: true },
     });
-    if (!entry) throw notFound('entry', req.params.entryId);
+    if (!entry) throw notFound("entry", req.params.entryId);
 
     // Sections are DB-only; only file-backed artifacts have storage keys.
     const keys = [
@@ -249,7 +248,7 @@ export function entryRoutes(app: FastifyInstance): void {
     try {
       await app.store.deleteAll(keys);
     } catch (err) {
-      req.log.warn({ err }, 'storage cleanup failed during entry delete');
+      req.log.warn({ err }, "storage cleanup failed during entry delete");
     }
 
     await dropEntryIndex(app.prisma, entry.id);

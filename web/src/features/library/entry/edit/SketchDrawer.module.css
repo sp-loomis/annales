@@ -1,0 +1,55 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 9, 5, 0.6);
+  z-index: 40;
+}
+
+.content {
+  position: fixed;
+  inset: 16px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-popover);
+  overflow: hidden;
+  z-index: 41;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.error {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}

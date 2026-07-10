@@ -1,0 +1,44 @@
+/* Design-token contract. ThemeProvider sets --world-font, --accent and
+   --surface-base per world; everything else derives here. Surfaces are warm
+   neutrals, never cold grays. */
+
+:root {
+  --font-ui: 'Inter Variable', system-ui, sans-serif;
+  --font-world: var(--world-font, 'Lora Variable'), Georgia, serif;
+
+  --accent: #8a5a2b;
+  --accent-soft: color-mix(in oklab, var(--accent) 16%, var(--surface-0));
+  --accent-text: color-mix(in oklab, var(--accent) 80%, var(--text-1));
+
+  --surface-base: #f6f2ea;
+  --surface-0: var(--surface-base);
+  --surface-1: color-mix(in oklab, var(--surface-base) 96%, #5a4a33);
+  --surface-2: color-mix(in oklab, var(--surface-base) 90%, #5a4a33);
+  --border: color-mix(in oklab, var(--surface-base) 78%, #5a4a33);
+  --text-1: #2b241b;
+  --text-2: color-mix(in oklab, #2b241b 62%, var(--surface-base));
+
+  --danger: #a83a2e;
+
+  --radius-s: 4px;
+  --radius-m: 8px;
+  --radius-l: 12px;
+
+  --shadow-popover: 0 4px 24px rgba(20, 15, 8, 0.18);
+
+  --header-height: 48px;
+  --rail-width: 48px;
+
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+[data-mode='dark'] {
+  --surface-base: #201b15;
+  --surface-0: var(--surface-base);
+  --surface-1: color-mix(in oklab, var(--surface-base) 94%, #e8dcc8);
+  --surface-2: color-mix(in oklab, var(--surface-base) 87%, #e8dcc8);
+  --border: color-mix(in oklab, var(--surface-base) 76%, #e8dcc8);
+  --text-1: #ece4d6;
+  --text-2: color-mix(in oklab, #ece4d6 60%, var(--surface-base));
+  --shadow-popover: 0 4px 28px rgba(0, 0, 0, 0.5);
+}

@@ -1,0 +1,101 @@
+.compositor {
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionLabel {
+  max-width: 320px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.interstitial {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 30px;
+  margin: 2px 0;
+  z-index: 3;
+  --insert-picker-opacity: 0;
+}
+
+.interstitialLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  transform: translateY(-50%);
+  background: var(--border);
+  opacity: 0;
+  transition: opacity 120ms var(--ease);
+}
+
+.interstitial:hover .interstitialLine {
+  opacity: 1;
+}
+
+.interstitial:hover {
+  --insert-picker-opacity: 1;
+}
+
+.interstitialControls {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  background: transparent;
+}
+
+.interstitialControlsWithMerge {
+  gap: 6px;
+}
+
+.mergeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 11px;
+  min-height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-0);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 120ms var(--ease),
+    color 120ms var(--ease),
+    border-color 120ms var(--ease),
+    background 120ms var(--ease);
+}
+
+.interstitial:hover .mergeButton {
+  opacity: 1;
+}
+
+.mergeButton:hover {
+  color: var(--accent-text);
+  border-color: var(--accent);
+  background: var(--surface-1);
+}
+
+.emptyHint {
+  margin: 8px 0;
+  color: var(--text-2);
+  font-size: 13px;
+  font-style: italic;
+  text-align: center;
+}

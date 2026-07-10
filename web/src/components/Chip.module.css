@@ -1,0 +1,31 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+button.chip {
+  cursor: pointer;
+  transition: background 120ms var(--ease), border-color 120ms var(--ease);
+}
+
+button.chip:hover {
+  background: var(--surface-1);
+}
+
+.selected {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+button.chip.selected:hover {
+  background: var(--accent-soft);
+}

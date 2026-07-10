@@ -1,0 +1,20 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in oklab, var(--accent) 30%, var(--surface-0));
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 0.85em;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  cursor: pointer;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+}

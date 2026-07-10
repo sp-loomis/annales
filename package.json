@@ -3,23 +3,33 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "web"
+  ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
+    "dev:web": "npm run dev -w web",
+    "dev:restart": "./scripts/restart-dev.sh",
+    "dev:api-local": "PORT=3001 S3_BUCKET=sheaf-local DATABASE_URL=postgresql://sheaf:sheaf@localhost:5433/sheaf_local npm run dev",
+    "dev:web-local": "VITE_API_PROXY_TARGET=http://localhost:3001 npm run dev -w web -- --port 5174",
+    "local": "bash ./scripts/local-dev.sh",
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "compose:up": "podman compose up -d",
     "compose:down": "podman compose down",
+    "db:local": "DATABASE_URL=postgresql://sheaf:sheaf@localhost:5433/sheaf_local prisma migrate deploy",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.600.0",
     "@aws-sdk/s3-request-presigner": "^3.600.0",
+    "@fastify/cors": "^9.0.1",
     "@prisma/client": "^5.16.0",
     "@turf/bbox-polygon": "^7.3.5",
     "@turf/boolean-intersects": "^7.3.5",
@@ -32,6 +42,7 @@
   "devDependencies": {
     "@types/d3-geo": "^3.1.0",
     "@types/node": "^20.14.0",
+    "playwright": "^1.61.1",
     "prisma": "^5.16.0",
     "tsx": "^4.16.0",
     "typescript": "^5.5.0",

@@ -96,7 +96,6 @@ model EntryTag {
 model Section {
   id          String @id @default(uuid())
   entryId     String
-  label       String?
   contentJson Json?
   order       Float
   entry       Entry  @relation(fields: [entryId], references: [id], onDelete: Cascade)

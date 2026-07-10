@@ -1,0 +1,36 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 180px;
+}
+
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.count {
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.newEntry {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
