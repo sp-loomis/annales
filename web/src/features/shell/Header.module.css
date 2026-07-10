@@ -1,7 +1,7 @@
 .header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   height: var(--header-height);
   padding: 0 12px;
   border-bottom: 1px solid var(--border);
@@ -12,7 +12,14 @@
 .left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-self: start;
+}
+
+.centerControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: center;
 }
 
 .logo {
