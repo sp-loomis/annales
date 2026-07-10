@@ -1,0 +1,93 @@
+.wrapper {
+  position: relative;
+}
+
+.editor :global(.tiptap) {
+  font-family: var(--font-world);
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--text-1);
+  outline: none;
+  min-height: 40px;
+}
+
+.editor :global(.tiptap p) {
+  margin: 0 0 0.9em;
+}
+
+.editor :global(.tiptap h2),
+.editor :global(.tiptap h3),
+.editor :global(.tiptap h4) {
+  line-height: 1.3;
+  margin: 1.4em 0 0.5em;
+}
+
+.editor :global(.tiptap ul),
+.editor :global(.tiptap ol) {
+  margin: 0 0 0.9em;
+  padding-left: 1.4em;
+}
+
+.editor :global(.tiptap blockquote) {
+  margin: 0 0 0.9em;
+  padding: 2px 0 2px 14px;
+  border-left: 3px solid var(--accent);
+  color: var(--text-2);
+}
+
+.editor :global(.tiptap code) {
+  font-family: ui-monospace, 'SF Mono', monospace;
+  font-size: 0.85em;
+  padding: 1px 5px;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+}
+
+.editor :global(.tiptap p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--text-2);
+  pointer-events: none;
+  height: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-popover);
+}
+
+.toolButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-s);
+  background: none;
+  cursor: pointer;
+  color: var(--text-2);
+}
+
+.toolButton:hover {
+  background: var(--surface-1);
+  color: var(--text-1);
+}
+
+.toolActive {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 2px;
+}

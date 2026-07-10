@@ -1,0 +1,92 @@
+.header {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.typeSelect {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleInput {
+  width: 100%;
+  padding: 2px 0;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  font-family: var(--font-world);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-1);
+  outline: none;
+}
+
+.titleInput:focus {
+  border-bottom-color: var(--accent);
+}
+
+.tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tagInput {
+  width: 110px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.errors {
+  padding: 8px 12px;
+  border: 1px solid color-mix(in oklab, var(--danger) 40%, var(--surface-0));
+  border-radius: var(--radius-m);
+  background: color-mix(in oklab, var(--danger) 8%, var(--surface-0));
+  color: var(--danger);
+  font-size: 12.5px;
+}
+
+.menu {
+  min-width: 140px;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-popover);
+  padding: 4px;
+  z-index: 20;
+}
+
+.menuItemDanger {
+  padding: 6px 10px;
+  border-radius: var(--radius-s);
+  font-size: 13px;
+  color: var(--danger);
+  cursor: pointer;
+  outline: none;
+}
+
+.menuItemDanger[data-highlighted] {
+  background: color-mix(in oklab, var(--danger) 10%, var(--surface-0));
+}

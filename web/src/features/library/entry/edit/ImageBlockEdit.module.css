@@ -1,0 +1,50 @@
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.imageArea {
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+
+.image {
+  max-width: 100%;
+  display: block;
+  border-radius: var(--radius-m);
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 110px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-m);
+  color: var(--text-2);
+  font-size: 12px;
+  padding: 12px;
+}
+
+.progressTrack {
+  width: 60%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 150ms var(--ease);
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}

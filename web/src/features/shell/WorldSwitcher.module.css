@@ -1,0 +1,104 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--radius-m);
+  background: none;
+  cursor: pointer;
+  color: var(--text-2);
+}
+
+.trigger:hover {
+  background: var(--surface-1);
+}
+
+.currentName {
+  font-family: var(--font-world);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.popover {
+  min-width: 260px;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-popover);
+  padding: 6px;
+  z-index: 20;
+}
+
+.worldList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.worldRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-m);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.worldRow:hover {
+  background: var(--surface-1);
+}
+
+.activeRow {
+  background: var(--accent-soft);
+}
+
+.accentDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.worldName {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iconCluster {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--text-2);
+}
+
+.newWorld {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 7px 10px;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-m) var(--radius-m);
+  background: none;
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.newWorld:hover {
+  background: var(--surface-1);
+  color: var(--text-1);
+}

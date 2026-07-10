@@ -1,0 +1,70 @@
+.frame {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  border-radius: var(--radius-m);
+  padding: 4px 0;
+}
+
+.frame:hover {
+  background: color-mix(in oklab, var(--surface-1) 50%, transparent);
+}
+
+.dragging {
+  opacity: 0.6;
+  z-index: 5;
+}
+
+.gutter {
+  width: 22px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 4px;
+}
+
+.handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-s);
+  background: none;
+  cursor: grab;
+  color: var(--text-2);
+  opacity: 0;
+  transition: opacity 120ms var(--ease);
+}
+
+.frame:hover .handle {
+  opacity: 1;
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.actions {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 120ms var(--ease);
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  padding: 1px;
+}
+
+.frame:hover .actions {
+  opacity: 1;
+}

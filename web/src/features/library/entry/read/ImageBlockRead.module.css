@@ -1,0 +1,30 @@
+.figure {
+  margin: 0 0 16px;
+}
+
+.image {
+  max-width: 100%;
+  border-radius: var(--radius-m);
+  display: block;
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 120px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-m);
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.caption {
+  margin-top: 6px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-2);
+  text-align: center;
+}

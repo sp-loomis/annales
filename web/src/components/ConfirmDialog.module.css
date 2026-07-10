@@ -1,0 +1,11 @@
+.description {
+  margin: 8px 0 16px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

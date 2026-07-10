@@ -1,0 +1,19 @@
+.input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-0);
+  color: var(--text-1);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 120ms var(--ease);
+}
+
+.input::placeholder {
+  color: var(--text-2);
+}
+
+.input:focus {
+  border-color: var(--accent);
+}

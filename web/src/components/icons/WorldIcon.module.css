@@ -1,0 +1,7 @@
+.fallback {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: color-mix(in oklab, currentColor 25%, transparent);
+  transform: scale(0.45);
+}

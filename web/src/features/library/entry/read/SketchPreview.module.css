@@ -1,0 +1,37 @@
+.figure {
+  margin: 0 0 16px;
+}
+
+.canvas {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-1);
+  min-height: 80px;
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.svgHost {
+  display: contents;
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 80px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.caption {
+  margin-top: 6px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-2);
+  text-align: center;
+}

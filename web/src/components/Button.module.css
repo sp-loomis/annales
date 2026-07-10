@@ -1,0 +1,49 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-m);
+  border: 1px solid transparent;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 120ms var(--ease), border-color 120ms var(--ease);
+  white-space: nowrap;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.primary {
+  background: var(--accent);
+  color: var(--surface-0);
+}
+
+.primary:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 88%, var(--text-1));
+}
+
+.outline {
+  border-color: var(--border);
+}
+
+.outline:hover:not(:disabled) {
+  background: var(--surface-1);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--surface-1);
+}
+
+.danger {
+  color: var(--danger);
+  border-color: color-mix(in oklab, var(--danger) 40%, var(--surface-0));
+}
+
+.danger:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--danger) 10%, var(--surface-0));
+}
