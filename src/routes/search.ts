@@ -1,12 +1,12 @@
-import { Prisma } from '@prisma/client';
-import type { FastifyInstance } from 'fastify';
-import booleanIntersects from '@turf/boolean-intersects';
-import { bboxPolygon } from '@turf/bbox-polygon';
-import { geoAzimuthalEquidistant } from 'd3-geo';
-import { notFound, validation } from '../lib/errors.js';
-import { type Bbox } from '../lib/artifact-util.js';
-import { parseGeoJson } from '../lib/payloads.js';
-import { splitLngBox, toCanonicalFeatures } from '../lib/geo.js';
+import { Prisma } from "@prisma/client";
+import type { FastifyInstance } from "fastify";
+import booleanIntersects from "@turf/boolean-intersects";
+import { bboxPolygon } from "@turf/bbox-polygon";
+import { geoAzimuthalEquidistant } from "d3-geo";
+import { notFound, validation } from "../lib/errors.js";
+import { type Bbox } from "../lib/artifact-util.js";
+import { parseGeoJson } from "../lib/payloads.js";
+import { splitLngBox, toCanonicalFeatures } from "../lib/geo.js";
 
 // Two-stage search (see docs/STACK.md): Postgres indexes narrow candidates
 // (tsvector GIN, canonical bbox GiST, tick btree, tag/type equality); the
@@ -35,8 +35,8 @@ function escapeLikePattern(value: string): string {
 }
 
 function buildSubstringSnippet(text: string, query: string): string {
-  const normalized = text.replace(/\s+/g, ' ').trim();
-  if (!normalized) return '';
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
 
   const q = query.trim();
   if (!q) return normalized.slice(0, 200);
@@ -54,30 +54,30 @@ function buildSubstringSnippet(text: string, query: string): string {
   const localHit = fragment.toLowerCase().indexOf(qLower);
   if (localHit < 0) return fragment;
 
-  const prefix = start > 0 ? '... ' : '';
-  const suffix = end < normalized.length ? ' ...' : '';
+  const prefix = start > 0 ? "... " : "";
+  const suffix = end < normalized.length ? " ..." : "";
   return (
     prefix +
     fragment.slice(0, localHit) +
-    '<b>' +
+    "<b>" +
     fragment.slice(localHit, localHit + q.length) +
-    '</b>' +
+    "</b>" +
     fragment.slice(localHit + q.length) +
     suffix
   );
 }
 
 function parseBbox(raw: string): Bbox {
-  const parts = raw.split(',').map(Number);
+  const parts = raw.split(",").map(Number);
   if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n))) {
-    throw validation('bbox must be four comma-separated numbers: minLng,minLat,maxLng,maxLat');
+    throw validation("bbox must be four comma-separated numbers: minLng,minLat,maxLng,maxLat");
   }
   return parts as unknown as Bbox;
 }
 
 // Project a GeoJSON coordinate tree through a d3 projection (planar output).
 function projectCoords(coords: any, proj: (p: [number, number]) => [number, number] | null): any {
-  if (typeof coords[0] === 'number') {
+  if (typeof coords[0] === "number") {
     const p = proj([coords[0], coords[1]]);
     return p ?? [NaN, NaN];
   }
@@ -86,7 +86,7 @@ function projectCoords(coords: any, proj: (p: [number, number]) => [number, numb
 
 function projectFeature(feature: any, proj: (p: [number, number]) => [number, number] | null): any {
   return {
-    type: 'Feature',
+    type: "Feature",
     properties: {},
     geometry: {
       type: feature.geometry.type,
@@ -110,51 +110,60 @@ function angularDeg(aLng: number, aLat: number, bLng: number, bLat: number): num
 // query centre? Past the near hemisphere the query-local planar frame distorts
 // toward its singularity and turf can't be trusted (see docs/ARCHITECTURE.md).
 function anyBeyond(coords: any, cLng: number, cLat: number, limit: number): boolean {
-  if (typeof coords[0] === 'number') return angularDeg(cLng, cLat, coords[0], coords[1]) > limit;
+  if (typeof coords[0] === "number") return angularDeg(cLng, cLat, coords[0], coords[1]) > limit;
   return coords.some((c: any) => anyBeyond(c, cLng, cLat, limit));
 }
 
 export function searchRoutes(app: FastifyInstance): void {
   app.get<{ Params: { worldId: string }; Querystring: SearchQuery }>(
-    '/worlds/:worldId/search',
+    "/worlds/:worldId/search",
     {
       schema: {
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            q: { type: 'string', minLength: 1 },
-            type: { type: 'string' },
-            tag: { type: ['string', 'array'], items: { type: 'string' } },
-            bbox: { type: 'string' },
-            globeId: { type: 'string' },
-            exact: { type: 'boolean', default: false },
-            tickStart: { type: 'integer' },
-            tickEnd: { type: 'integer' },
-            timelineId: { type: 'string' },
-            limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
-            cursor: { type: 'string' },
+            q: { type: "string", minLength: 1 },
+            type: { type: "string" },
+            tag: { type: ["string", "array"], items: { type: "string" } },
+            bbox: { type: "string" },
+            globeId: { type: "string" },
+            exact: { type: "boolean", default: false },
+            tickStart: { type: "integer" },
+            tickEnd: { type: "integer" },
+            timelineId: { type: "string" },
+            limit: { type: "integer", minimum: 1, maximum: 200, default: 50 },
+            cursor: { type: "string" },
           },
         },
       },
     },
     async (req) => {
       const { worldId } = req.params;
-      const { q, type, bbox: rawBbox, globeId, exact, tickStart, tickEnd, timelineId, limit = 50 } =
-        req.query;
+      const {
+        q,
+        type,
+        bbox: rawBbox,
+        globeId,
+        exact,
+        tickStart,
+        tickEnd,
+        timelineId,
+        limit = 50,
+      } = req.query;
       const qLike = q ? `%${escapeLikePattern(q)}%` : null;
       const tags = req.query.tag === undefined ? [] : ([] as string[]).concat(req.query.tag);
 
       const world = await app.prisma.world.findUnique({ where: { id: worldId } });
-      if (!world) throw notFound('world', worldId);
+      if (!world) throw notFound("world", worldId);
 
       const hasTicks = tickStart !== undefined || tickEnd !== undefined;
       if (hasTicks && (tickStart === undefined || tickEnd === undefined)) {
-        throw validation('tickStart and tickEnd must be given together');
+        throw validation("tickStart and tickEnd must be given together");
       }
-      if (rawBbox && !globeId) throw validation('bbox requires globeId');
-      if (hasTicks && !timelineId) throw validation('tickStart/tickEnd requires timelineId');
+      if (rawBbox && !globeId) throw validation("bbox requires globeId");
+      if (hasTicks && !timelineId) throw validation("tickStart/tickEnd requires timelineId");
       if (!q && !type && tags.length === 0 && !rawBbox && !hasTicks) {
-        throw validation('at least one filter (q, type, tag, bbox, tickStart/tickEnd) is required');
+        throw validation("at least one filter (q, type, tag, bbox, tickStart/tickEnd) is required");
       }
       const bbox = rawBbox ? parseBbox(rawBbox) : null;
       // The query box may itself cross the antimeridian → 1–2 canonical boxes.
@@ -186,7 +195,7 @@ export function searchRoutes(app: FastifyInstance): void {
           JOIN "CrsDefinition" c ON c.id = g."crsId"
           JOIN "GeometryBox" gb ON gb."geometryId" = g.id
           WHERE g."entryId" = e.id AND c."globeId" = ${globeId} AND g.status = 'ready'
-            AND (${Prisma.join(overlaps, ' OR ')}))`);
+            AND (${Prisma.join(overlaps, " OR ")}))`);
       }
       if (hasTicks) {
         conds.push(Prisma.sql`EXISTS (
@@ -203,7 +212,7 @@ export function searchRoutes(app: FastifyInstance): void {
         SELECT e.id, e.title, ety.slug AS type, e."updatedAt"
         FROM "Entry" e
         JOIN "EntryType" ety ON ety.id = e."typeId"
-        WHERE ${Prisma.join(conds, ' AND ')}
+        WHERE ${Prisma.join(conds, " AND ")}
         ORDER BY e."updatedAt" DESC`);
 
       let ids = candidates.map((c) => c.id);
@@ -219,7 +228,12 @@ export function searchRoutes(app: FastifyInstance): void {
       const queryPoly = bbox ? bboxPolygon(bbox) : null;
       const queryDegenerate =
         queryPoly !== null &&
-        anyBeyond(queryPoly.geometry.coordinates, (bbox![0] + bbox![2]) / 2, (bbox![1] + bbox![3]) / 2, HORIZON);
+        anyBeyond(
+          queryPoly.geometry.coordinates,
+          (bbox![0] + bbox![2]) / 2,
+          (bbox![1] + bbox![3]) / 2,
+          HORIZON
+        );
 
       if (bbox && exact && ids.length > 0 && !queryDegenerate) {
         const cLng = (bbox[0] + bbox[2]) / 2;
@@ -229,7 +243,7 @@ export function searchRoutes(app: FastifyInstance): void {
         const projQuery = projectFeature(queryPoly, proj);
 
         const geoms = await app.prisma.geometry.findMany({
-          where: { entryId: { in: ids }, status: 'ready', crs: { globeId } },
+          where: { entryId: { in: ids }, status: "ready", crs: { globeId } },
           include: { crs: { include: { globe: true } } },
         });
 
@@ -237,7 +251,7 @@ export function searchRoutes(app: FastifyInstance): void {
         for (const g of geoms) {
           if (surviving.has(g.entryId)) continue;
           const radius = Number((g.crs.globe.params as any)?.radius);
-          const parsed = parseGeoJson((await app.store.getBytes(g.filePath)).toString('utf8'));
+          const parsed = parseGeoJson((await app.store.getBytes(g.filePath)).toString("utf8"));
           const canon = toCanonicalFeatures(parsed.features, g.crs.params as any, radius);
           // candidate wraps toward the frame singularity → keep, don't test
           if (canon.some((f) => anyBeyond(f.geometry.coordinates, cLng, cLat, HORIZON))) {

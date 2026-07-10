@@ -100,7 +100,11 @@ export function EntryView({ entryId }: { entryId: string }) {
         <div className={styles.meta}>
           <span className={styles.typeBadge}>
             <span className={styles.typeBadgeIcon}>
-              <WorldIcon iconName={type?.iconName} iconWeight={type?.iconWeight} size={typeIconSize} />
+              <WorldIcon
+                iconName={type?.iconName}
+                iconWeight={type?.iconWeight}
+                size={typeIconSize}
+              />
             </span>
             <span className={styles.typeBadgeLabel}>{type?.name ?? entry.type}</span>
           </span>

@@ -13,7 +13,9 @@
 
 button.chip {
   cursor: pointer;
-  transition: background 120ms var(--ease), border-color 120ms var(--ease);
+  transition:
+    background 120ms var(--ease),
+    border-color 120ms var(--ease);
 }
 
 button.chip:hover {

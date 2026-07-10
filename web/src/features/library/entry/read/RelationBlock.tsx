@@ -4,15 +4,15 @@
 // (falling back to name). Edit-mode add/remove controls are injected via
 // children so the block renders identically in both modes.
 
-import type { ReactNode } from 'react';
-import { ArrowsLeftRight, X } from '@phosphor-icons/react';
-import type { RelationView } from '../../../../api/types';
-import { useWorkspaceStore } from '../../../../stores/workspaceStore';
-import { WorldIcon } from '../../../../components/icons/WorldIcon';
-import { IconButton } from '../../../../components/IconButton';
-import { TID } from '../../../../testids';
-import { useScaledPx } from '../../../../theme/ui-scale';
-import styles from './RelationBlock.module.css';
+import type { ReactNode } from "react";
+import { ArrowsLeftRight, X } from "@phosphor-icons/react";
+import type { RelationView } from "../../../../api/types";
+import { useWorkspaceStore } from "../../../../stores/workspaceStore";
+import { WorldIcon } from "../../../../components/icons/WorldIcon";
+import { IconButton } from "../../../../components/IconButton";
+import { TID } from "../../../../testids";
+import { useScaledPx } from "../../../../theme/ui-scale";
+import styles from "./RelationBlock.module.css";
 
 export function RelationBlock({
   relations,
@@ -48,15 +48,14 @@ export function RelationBlock({
               <button
                 type="button"
                 className={styles.cardBody}
-                onClick={() => openTab(r.otherEntry.id)}
-              >
+                onClick={() => openTab(r.otherEntry.id)}>
                 <span className={styles.relName}>
                   <WorldIcon
                     iconName={r.type.iconName}
                     iconWeight={r.type.iconWeight}
                     size={relationIconSize}
                   />
-                  {r.direction === 'out' ? r.type.name : (r.type.inverseName ?? r.type.name)}
+                  {r.direction === "out" ? r.type.name : (r.type.inverseName ?? r.type.name)}
                 </span>
                 <span className={styles.target}>
                   <WorldIcon
@@ -72,8 +71,7 @@ export function RelationBlock({
                   label="Remove relation"
                   className={styles.remove}
                   onClick={() => onRemove(r)}
-                  data-testid={TID.relationRemove(r.id)}
-                >
+                  data-testid={TID.relationRemove(r.id)}>
                   <X size={removeIconSize} />
                 </IconButton>
               )}

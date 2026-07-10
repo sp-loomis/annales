@@ -79,7 +79,9 @@ function Tab({
         }}
         aria-label="Close tab"
         data-testid={TID.tabClose(entryId)}>
-        {dirty ? <Circle size={tabDirtyIconSize} weight="fill" className={styles.dirtyDot} /> : null}
+        {dirty ? (
+          <Circle size={tabDirtyIconSize} weight="fill" className={styles.dirtyDot} />
+        ) : null}
         <X size={tabCloseIconSize} className={dirty ? styles.closeIconDirty : undefined} />
       </button>
     </div>
