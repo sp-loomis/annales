@@ -1,6 +1,7 @@
 # User Guide
 
-Running the backend, talking to it, and looking inside it while it runs.
+Running the backend and frontend, talking to the API, and looking inside it
+all while it runs.
 
 ## Prerequisites
 
@@ -29,8 +30,9 @@ restart. Postgres data survives restarts via the `sheaf-pgdata` volume.
 
 ```sh
 npm run dev          # API on http://localhost:3000, restarts on save
-npm test             # 105 contract tests (containers must be up)
-npm run typecheck
+npm run dev:web      # frontend on http://localhost:5173 (needs the API up too)
+npm test             # 360 contract + unit tests (containers must be up)
+npm run typecheck    # backend; `npm run typecheck -w web` for the frontend
 npm run compose:down # stop containers (data volumes persist)
 ```
 
@@ -40,6 +42,59 @@ Readiness after `compose:up` (podman-compose has no `--wait`):
 podman exec sheaf_postgres_1 pg_isready -U sheaf
 curl -s localhost:4566/_localstack/health | jq .services.s3
 ```
+
+## Frontend dev mode
+
+The React app lives in `web/` (an npm workspace — the root `npm install`
+covers it; there is no separate install step). Run it alongside the API:
+
+```sh
+npm run dev        # terminal 1 — API on :3000
+npm run dev:web    # terminal 2 — Vite dev server on http://localhost:5173
+```
+
+Open http://localhost:5173. First run shows a "create your first world" card;
+after that the header's world switcher, the sidebar search, and the tabbed
+entry workspace are the whole surface. State worth knowing about:
+
+- **How requests flow** — the frontend always calls `/api/...`; the Vite dev
+  server proxies that to `http://localhost:3000` and strips the prefix
+  (`web/vite.config.ts`). So the browser only ever talks to :5173 — except
+  image/sketch payloads, which PUT/GET **directly against LocalStack :4566**
+  via presigned URLs. If images upload but never display, check LocalStack,
+  not the API.
+- **CORS** — the API also allows `http://localhost:5173` directly
+  (`CORS_ORIGINS` env, comma-separated, in `src/app.ts`). Only needed when
+  bypassing the proxy, e.g. tools hitting :3000 from a browser context.
+- **Where UI state lives** — open tabs and sidebar filters persist per world
+  in the backend (`WorkspaceState`), theme in `WorldTheme` (both instant-save;
+  no save button). Panel widths persist in `localStorage` (`sheaf-layout`),
+  last active world in `localStorage` (`sheaf:lastWorldId`). "Reset the UI" =
+  clear those two localStorage keys and PUT empty workspace-state.
+- **Playwright hooks** — every interactive control carries a `data-testid`
+  from the central registry `web/src/testids.ts`. Add new ids there, never
+  inline.
+- **Browser smoke checks** — with both servers up:
+
+  ```sh
+  node scripts/frontend-smoke.mjs   # renders? console errors? screenshot to /tmp
+  node scripts/frontend-e2e.mjs     # search → edit → save → persist round-trip
+  ```
+
+- **Production build** — `npm run build -w web` → static bundle in
+  `web/dist/` (no server config yet; any static host + a reverse proxy
+  mapping `/api` → the API port works).
+
+Frontend architecture notes (stack, state model, save orchestration, theming)
+live in `web/README.md`.
+
+Dev-mode gotchas:
+
+| Symptom | Cause / fix |
+|---|---|
+| Blank page + `504 Outdated Optimize Dep` in console | Vite's dep cache went stale after `node_modules` changed. Restart `npm run dev:web` |
+| "Invalid hook call" / two Reacts | React is pinned to 18 (Excalidraw's peer range); a stray `web/node_modules/react` from an old install can shadow it. `rm -rf node_modules web/node_modules package-lock.json && npm install --cache /tmp/npm-cache-sheaf` |
+| Images stuck "pending" | Presigned PUT goes browser→LocalStack directly; confirm :4566 is up and the bucket exists (`curl -s localhost:4566/_localstack/health`) |
 
 ## Throwing requests at it
 
@@ -68,41 +123,48 @@ GLOBE=$(curl -s -X POST $BASE/worlds/$WORLD/globes -H 'content-type: application
 CRS=$(curl -s -X POST $BASE/globes/$GLOBE/crs -H 'content-type: application/json' \
   -d '{"name":"main","params":{"type":"equirectangular"}}' | jq -r .id)
 
-# 2. An entry
+# 2. An entry (type must be one of the world's EntryType slugs — defaults:
+#    character, location, faction, event, object)
 ENTRY=$(curl -s -X POST $BASE/worlds/$WORLD/entries -H 'content-type: application/json' \
-  -d '{"type":"region","title":"The Shattered Coast","tags":["coastal"]}' | jq -r .id)
+  -d '{"type":"location","title":"The Shattered Coast","tags":["coastal"]}' | jq -r .id)
 
-# 3. Attach a document — THREE steps because payload travels by presigned URL
+# 3. Attach a section — prose lives in the DB as ProseMirror JSON, no upload
+SECTION=$(curl -s -X POST $BASE/entries/$ENTRY/sections -H 'content-type: application/json' \
+  -d '{"label":"Overview"}' | jq -r .id)
+curl -s -X PATCH $BASE/sections/$SECTION -H 'content-type: application/json' \
+  -d '{"contentJson":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Salt and ruin, west of the old kingdom."}]}]}}' \
+  | jq '{id, label}'
+
+# 4. Attach a sketch — THREE steps because payload travels by presigned URL
 #    (a) create: metadata + a presigned PUT slot
-DOC=$(curl -s -X POST $BASE/entries/$ENTRY/documents -H 'content-type: application/json' \
-  -d '{"role":"body"}')
-DOC_ID=$(echo "$DOC" | jq -r .id)
-UPLOAD_URL=$(echo "$DOC" | jq -r .upload.url)
+SKETCH=$(curl -s -X POST $BASE/entries/$ENTRY/sketches -H 'content-type: application/json' \
+  -d '{"label":"coastline"}')
+SKETCH_ID=$(echo "$SKETCH" | jq -r .id)
+UPLOAD_URL=$(echo "$SKETCH" | jq -r .upload.url)
 
 #    (b) upload: PUT the payload straight to (LocalStack) S3 — not the API
-curl -s -X PUT "$UPLOAD_URL" -H 'content-type: text/markdown' \
-  --data-binary '# The Shattered Coast
-
-Salt and ruin, west of the old kingdom.'
+curl -s -X PUT "$UPLOAD_URL" -H 'content-type: application/json' \
+  --data-binary '{"type":"excalidraw","version":2,"elements":[],"appState":{},"files":{}}'
 
 #    (c) finalize: server validates, derives cached fields, flips to ready
-curl -s -X POST $BASE/documents/$DOC_ID/finalize | jq '{id, status}'
+curl -s -X POST $BASE/sketches/$SKETCH_ID/finalize | jq '{id, status}'
 
-# 4. Read it back — download is a presigned GET
-curl -s $BASE/documents/$DOC_ID | jq .download.url
-curl -s "$(curl -s $BASE/documents/$DOC_ID | jq -r .download.url)"
+#    Read it back — download is a presigned GET
+curl -s $BASE/sketches/$SKETCH_ID | jq .download.url
 
-# 5. Search (document text is indexed at finalize)
-curl -s "$BASE/worlds/$WORLD/search?q=shattered" | jq .
+# 5. Search (section text is indexed on PATCH; artifact text at finalize.
+#    NOTE: entry TITLES are not in the FTS index — the frontend matches them
+#    client-side; over the raw API search for body text)
+curl -s "$BASE/worlds/$WORLD/search?q=ruin" | jq .
 
-# 6. Entry detail aggregates everything
+# 6. Entry detail aggregates everything — sections, artifacts AND relations inline
 curl -s $BASE/entries/$ENTRY | jq .
 ```
 
 Geometries are the same lifecycle with `{"crsId":"$CRS"}` in the create body
 and a GeoJSON Feature/FeatureCollection as the payload; images add
 `{"contentType":"image/png"}` and get a `thumbnail` presigned URL after
-finalize; sketches take Excalidraw scene JSON.
+finalize.
 
 Error responses always look like:
 
@@ -160,7 +222,7 @@ SELECT "entryId", "sourceType", left(text, 60) AS text FROM "SearchIndex";
 SELECT id, label, bbox FROM "Geometry";
 
 -- artifact lifecycle state (failed = pending + expired window, derived at read)
-SELECT id, status, "uploadExpiresAt", "filePath" FROM "Document";
+SELECT id, status, "uploadExpiresAt", "filePath" FROM "Sketch";
 
 -- the relation graph
 SELECT rt.name, ef.title AS from_title, et.title AS to_title
