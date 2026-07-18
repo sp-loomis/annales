@@ -30,9 +30,6 @@ export function DateRangeBlock({
   const wc = useWorldCalendars(entry.worldId);
   const ranges = entry.dateRanges;
 
-  // Nothing to show and not editing: omit the section entirely.
-  if (ranges.length === 0 && !editable) return null;
-
   return (
     <section className={styles.block}>
       <div className={styles.header}>
