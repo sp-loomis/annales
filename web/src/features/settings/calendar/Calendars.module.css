@@ -8,8 +8,15 @@
   width: 100%;
 }
 
-.timelineSelect,
 .timelineName {
+  font-size: var(--ui-font-size);
+}
+
+.timelineSelect {
+  padding: calc(6px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-0);
   font-size: var(--ui-font-size);
 }
 
@@ -134,6 +141,10 @@
 }
 
 .modeSelect {
+  padding: calc(4px * var(--ui-scale-factor)) calc(8px * var(--ui-scale-factor));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-0);
   font-size: var(--ui-font-size-small);
 }
 
