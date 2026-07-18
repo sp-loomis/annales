@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash, PencilSimple } from "@phosphor-icons/react";
+import { Trash, PencilSimple, Copy } from "@phosphor-icons/react";
 import { keys } from "../../api/keys";
 import {
   createCalendar,
@@ -97,6 +97,25 @@ export function CalendarsPanel() {
     onError: (e) => setError(e instanceof ApiError ? e.message : "Create failed"),
   });
 
+  const duplicate = useMutation({
+    mutationFn: (c: Calendar) => {
+      const existing = new Set((calendars?.items ?? []).map((x) => x.name));
+      let name = `${c.name} (copy)`;
+      for (let n = 2; existing.has(name); n++) name = `${c.name} (copy ${n})`;
+      return createCalendar(timelineId!, { name, definition: c.definition });
+    },
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: keys.calendars(timelineId!) });
+    },
+    onError: (e) =>
+      setError(
+        e instanceof ApiError && e.code === "CONFLICT"
+          ? "A calendar with that name already exists."
+          : "Duplicate failed"
+      ),
+  });
+
   const remove = useMutation({
     mutationFn: (id: string) => deleteCalendar(id),
     onSuccess: () => {
@@ -161,6 +180,12 @@ export function CalendarsPanel() {
               onClick={() => setEditing(c)}
               data-testid={TID.calendarEdit(c.id)}>
               <PencilSimple size={14} />
+            </IconButton>
+            <IconButton
+              label="Duplicate calendar"
+              onClick={() => duplicate.mutate(c)}
+              data-testid={TID.calendarDuplicate(c.id)}>
+              <Copy size={14} />
             </IconButton>
             <IconButton
               label="Delete calendar"

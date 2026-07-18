@@ -103,6 +103,7 @@ export const TID = {
   calendarAdd: "settings-calendar-add",
   calendarEdit: (id: string) => `settings-calendar-edit-${id}`,
   calendarDelete: (id: string) => `settings-calendar-delete-${id}`,
+  calendarDuplicate: (id: string) => `settings-calendar-duplicate-${id}`,
   calendarName: "settings-calendar-name",
   calendarSave: "settings-calendar-save",
   calendarAddParam: "settings-calendar-add-param",
