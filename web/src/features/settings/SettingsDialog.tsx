@@ -9,6 +9,7 @@ import { IconButton } from "../../components/IconButton";
 import { GeneralPanel } from "./GeneralPanel";
 import { EntryTypesPanel } from "./EntryTypesPanel";
 import { RelationTypesPanel } from "./RelationTypesPanel";
+import { CalendarsPanel } from "./CalendarsPanel";
 import { ThemePanel } from "./ThemePanel";
 import { TID } from "../../testids";
 import { getOverlayContainer } from "../../lib/overlay";
@@ -20,6 +21,7 @@ const SECTIONS = [
   { key: "general", label: "General", Panel: GeneralPanel },
   { key: "entry-types", label: "Entry Types", Panel: EntryTypesPanel },
   { key: "relation-types", label: "Relation Types", Panel: RelationTypesPanel },
+  { key: "calendars", label: "Calendars", Panel: CalendarsPanel },
   { key: "theme", label: "World Theme", Panel: ThemePanel },
 ] as const;
 
@@ -38,7 +40,7 @@ export function SettingsDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal container={portalContainer}>
-        <Dialog.Overlay className={dialogStyles.overlay} />
+        <Dialog.Overlay className={[dialogStyles.overlay, styles.overlay].join(" ")} />
         <Dialog.Content className={styles.content}>
           <div className={styles.nav}>
             <Dialog.Title className={styles.title}>World Settings</Dialog.Title>

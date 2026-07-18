@@ -13,4 +13,6 @@ export const keys = {
   theme: (worldId: string) => ['worlds', worldId, 'theme'] as const,
   workspace: (worldId: string) => ['worlds', worldId, 'workspace-state'] as const,
   artifact: (kind: string, id: string) => ['artifacts', kind, id] as const,
+  timelines: (worldId: string) => ['worlds', worldId, 'timelines'] as const,
+  calendars: (timelineId: string) => ['timelines', timelineId, 'calendars'] as const,
 };

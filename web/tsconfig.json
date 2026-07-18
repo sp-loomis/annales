@@ -9,6 +9,11 @@
 
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "@calendar": ["../src/lib/calendar/index.ts"],
+      "@dsl": ["../src/lib/dsl/index.ts"]
+    },
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
@@ -20,5 +25,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src", "../src/lib/calendar", "../src/lib/dsl"]
 }

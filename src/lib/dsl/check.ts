@@ -83,7 +83,8 @@ class Checker {
     }
 
     const nullOk = this.env.allowNull && expected.kind === 'numberOrNull';
-    const retTy = this.typeExpr(program.ret, nullOk);
+    const hint = expected.kind === 'namedOrNumber' ? expected.domain : undefined;
+    const retTy = this.typeExpr(program.ret, nullOk, hint);
     this.checkReturn(retTy, expected, program.retPos);
   }
 
@@ -143,7 +144,7 @@ class Checker {
   }
 
   /** Type of a variable reference, recording the dependency. */
-  private varType(name: string, pos: Pos, opts: { bare: boolean; modulus?: number }): Ty {
+  private varType(name: string, _pos: Pos, opts: { bare: boolean; modulus?: number }): Ty {
     const local = this.locals.get(name);
     if (local) return local;
     const bound = this.env.vars.get(name);
@@ -160,7 +161,7 @@ class Checker {
     return ty;
   }
 
-  private typeExpr(expr: Expr, nullOk: boolean): Ty {
+  private typeExpr(expr: Expr, nullOk: boolean, hint?: string): Ty {
     switch (expr.kind) {
       case 'number':
         return { kind: 'number' };
@@ -204,16 +205,16 @@ class Checker {
       case 'call':
         return this.typeCall(expr);
       case 'case':
-        return this.typeCase(expr, nullOk);
+        return this.typeCase(expr, nullOk, hint);
       case 'if': {
         const cond = this.typeExpr(expr.cond, false);
         if (cond.kind !== 'boolean') {
           throw new DslError(`'if' condition must be Boolean, got ${tyName(cond)}`, expr.pos);
         }
         // Null is rejected under `if` outright (spec: no exhaustiveness for Number domains).
-        const thenTy = this.typeExpr(expr.then, false);
-        const elseTy = this.typeExpr(expr.else, false);
-        return this.unifyBranches([thenTy, elseTy], expr.pos, false);
+        const thenTy = this.typeExpr(expr.then, false, hint);
+        const elseTy = this.typeExpr(expr.else, false, hint);
+        return this.unifyBranches([thenTy, elseTy], expr.pos, false, hint);
       }
     }
   }
@@ -313,7 +314,7 @@ class Checker {
     return { kind: 'number' };
   }
 
-  private typeCase(expr: Extract<Expr, { kind: 'case' }>, nullOk: boolean): Ty {
+  private typeCase(expr: Extract<Expr, { kind: 'case' }>, nullOk: boolean, hint?: string): Ty {
     const subjectTy = this.varType(expr.subject, expr.subjectPos, { bare: true });
     if (subjectTy.kind !== 'named') {
       throw new DslError(
@@ -336,10 +337,10 @@ class Checker {
         }
         covered.add(v.name);
       }
-      branchTypes.push(this.typeExpr(clause.expr, nullOk));
+      branchTypes.push(this.typeExpr(clause.expr, nullOk, hint));
     }
     if (expr.elseExpr) {
-      branchTypes.push(this.typeExpr(expr.elseExpr, nullOk));
+      branchTypes.push(this.typeExpr(expr.elseExpr, nullOk, hint));
       if (covered.size === domain.length) {
         this.warnings.push(
           `'case ${expr.subject}' covers the full domain — the 'else' branch is unreachable`
@@ -352,10 +353,10 @@ class Checker {
         expr.pos
       );
     }
-    return this.unifyBranches(branchTypes, expr.pos, nullOk);
+    return this.unifyBranches(branchTypes, expr.pos, nullOk, hint);
   }
 
-  private unifyBranches(types: Ty[], pos: Pos, nullOk: boolean): Ty {
+  private unifyBranches(types: Ty[], pos: Pos, nullOk: boolean, hint?: string): Ty {
     const mismatch = () => {
       throw new DslError(
         `branches have mismatched types: ${types.map(tyName).join(', ')}`,
@@ -381,6 +382,13 @@ class Checker {
     }
     const first = types[0];
     if (first.kind === 'namedLit') {
+      if (hint) {
+        for (const t of types) {
+          if (t.kind === 'namedLit') this.resolveLiteral(t.name, hint, pos);
+          else mismatch();
+        }
+        return { kind: 'named', domain: hint };
+      }
       throw new DslError(
         `cannot infer the domain of Named literal '${first.name}' — compare or return it where a domain is known`,
         pos
@@ -394,13 +402,10 @@ class Checker {
     for (const part of expr.parts) {
       if ('text' in part) continue;
       const ty = this.typeExpr(part.expr, false);
-      if (ty.kind === 'string') {
-        throw new DslError('cannot interpolate a String inside a template (no nesting)', expr.pos);
-      }
       if (ty.kind === 'namedLit') {
         throw new DslError(`unresolved identifier '${ty.name}'`, expr.pos);
       }
-      if (ty.kind !== 'number' && ty.kind !== 'named' && ty.kind !== 'boolean') {
+      if (ty.kind !== 'number' && ty.kind !== 'named' && ty.kind !== 'boolean' && ty.kind !== 'string') {
         throw new DslError(`cannot interpolate a ${tyName(ty)} value`, expr.pos);
       }
       if (part.spec && ty.kind !== 'number') {

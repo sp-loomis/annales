@@ -5,6 +5,7 @@ import { evaluate, type Bindings, type Value } from './eval.js';
 import type { Program } from './ast.js';
 
 export { DslError } from './errors.js';
+export { KEYWORDS, FUNCTION_NAMES, RESERVED } from './token.js';
 export type { Program, Expr } from './ast.js';
 export type { Env, ExpectedType, Deps, VarType, DepInfo } from './check.js';
 export type { Bindings, Value, NamedValue } from './eval.js';
