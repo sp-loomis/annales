@@ -206,3 +206,79 @@ export interface RelationRow {
   toId: string;
   typeId: string;
 }
+
+// ---- timelines & calendars ----
+// The definition mirrors the backend authoring shape validated by
+// src/lib/calendar/validate.ts. Numeric fields may be a constant or a DSL rule
+// ({ dsl }); the top-level param must stay fully static.
+
+export interface DslAttachment {
+  dsl: string;
+}
+
+/** A field that is either a plain constant or a DSL rule. */
+export type Attach<T> = T | DslAttachment;
+
+/** A Named param/derived value: a bare id, or an id with a display override. */
+export type NamedValueDef = string | { value: string; display?: string };
+
+export interface CalendarParam {
+  name: string;
+  type: "number" | "named";
+  /** Named only. */
+  values?: NamedValueDef[];
+  /** Named only: active-domain length (defaults to values.length). */
+  count?: Attach<number>;
+  /** Number only. */
+  range?: { from: Attach<number | null>; to: Attach<number | null> };
+  /** Display/tick direction; defaults to 1. */
+  step?: Attach<1 | -1>;
+  /** Terminal (finest) param only: ticks per unit. */
+  unitTicks?: Attach<number>;
+}
+
+export interface DerivedFieldDef {
+  name: string;
+  type: "number" | "boolean" | "named";
+  values?: NamedValueDef[];
+  expr: DslAttachment;
+}
+
+export interface CalendarFormat {
+  pretty?: Record<string, DslAttachment>;
+  short?: Record<string, DslAttachment>;
+}
+
+export interface CalendarDefinition {
+  version: 1;
+  /** Coarsest → finest. */
+  params: CalendarParam[];
+  /** Full param tuple at tick 0. */
+  epoch: Record<string, number | string>;
+  derivedFields?: DerivedFieldDef[];
+  format?: CalendarFormat;
+}
+
+export interface Timeline {
+  id: string;
+  worldId: string;
+  name: string;
+  params: unknown;
+}
+
+export interface Calendar {
+  id: string;
+  timelineId: string;
+  name: string;
+  definition: CalendarDefinition;
+}
+
+export interface CalendarConvertResult {
+  date: Record<string, number | string>;
+  tickStart: number | null;
+  tickEnd: number | null;
+  pretty: string;
+  short: string;
+  /** Present only when the date tuple is full. */
+  derived?: Record<string, number | boolean | string>;
+}

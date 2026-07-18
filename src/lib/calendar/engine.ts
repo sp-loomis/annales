@@ -1,4 +1,4 @@
-import type { Bindings, NamedValue, Value } from '../dsl/index.js';
+import type { Bindings, NamedValue } from '../dsl/index.js';
 import { CalendarError, type CompiledCalendar, type CompiledParam } from './types.js';
 import {
   bindParam,
@@ -8,7 +8,6 @@ import {
   numberInDomain,
   resolveParamDomain,
   type ResolvedDomain,
-  type ResolvedNamed,
   type ResolvedNumber,
 } from './order.js';
 import { classifyLevel } from './period.js';
@@ -435,7 +434,7 @@ function outOfRange(tick: number): never {
 function walkForward(
   cal: CompiledCalendar,
   level: number,
-  parentB: Bindings,
+  _parentB: Bindings,
   dom: ResolvedDomain,
   anchor: Located,
   tick: number,
@@ -493,7 +492,7 @@ function walkForward(
 function walkBackward(
   cal: CompiledCalendar,
   level: number,
-  parentB: Bindings,
+  _parentB: Bindings,
   dom: ResolvedDomain,
   anchor: Located,
   tick: number,

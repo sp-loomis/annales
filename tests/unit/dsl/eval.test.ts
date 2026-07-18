@@ -155,6 +155,74 @@ describe('eval — templates', () => {
   it('renders plain numbers without padding', () => {
     expect(evalRule('return "{year / 4}"', { kind: 'string' })).toBe('1.25');
   });
+
+  it('interpolates a computed String local', () => {
+    expect(
+      evalRule('m := "{month} {year}"\nreturn "Date: {m}"', { kind: 'string' })
+    ).toBe('Date: The Frozen Month 5');
+  });
+
+  it('a format spec on a String interpolation is a static error', () => {
+    expect(() =>
+      evalRule('m := "{year}"\nreturn "{m:03d}"', { kind: 'string' })
+    ).toThrow(DslError);
+  });
+});
+
+describe('eval — Named branches (domain hint)', () => {
+  const eraEnv = (): Env =>
+    env({
+      vars: new Map([
+        ['year', { kind: 'number' }],
+        ['era', { kind: 'named', domain: 'era' }],
+        ['flag', { kind: 'boolean' }],
+      ]),
+      namedDomains: new Map([['era', ['BC', 'AD']]]),
+    });
+  const eraBindings = (era: string): Bindings => ({
+    values: new Map<string, Value>([
+      ['year', 5],
+      ['era', { domain: 'era', value: era }],
+      ['flag', true],
+    ]),
+    activeDomains: new Map([['era', ['BC', 'AD']]]),
+  });
+  const expected: ExpectedType = { kind: 'namedOrNumber', domain: 'era' };
+
+  // A bare-literal Named result evaluates to a value-only NamedValue (empty domain);
+  // the calendar engine reconstructs the domain from the field's declaration, exactly
+  // as a direct `return AD` does. Only the `value` id is carried by the DSL.
+  it('resolves all-literal if branches against the return domain', () => {
+    expect(
+      evalRule('return if year >= 1 then AD else BC', expected, eraBindings('AD'), eraEnv())
+    ).toEqual({ domain: '', value: 'AD' });
+    expect(
+      evalRule('return if year >= 100 then AD else BC', expected, eraBindings('BC'), eraEnv())
+    ).toEqual({ domain: '', value: 'BC' });
+  });
+
+  it('resolves all-literal case clauses against the return domain', () => {
+    expect(
+      evalRule('return case era when BC then BC when AD then AD', expected, eraBindings('AD'), eraEnv())
+    ).toEqual({ domain: '', value: 'AD' });
+  });
+
+  it('resolves a nested if inside a case clause', () => {
+    expect(
+      evalRule(
+        'return case era when BC then BC when AD then (if year >= 1 then AD else BC)',
+        expected,
+        eraBindings('AD'),
+        eraEnv()
+      )
+    ).toEqual({ domain: '', value: 'AD' });
+  });
+
+  it('rejects a wrong-domain literal in a branch', () => {
+    expect(() =>
+      evalRule('return if flag then January else BC', expected, eraBindings('AD'), eraEnv())
+    ).toThrow(DslError);
+  });
 });
 
 describe('eval — null', () => {

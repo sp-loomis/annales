@@ -1,0 +1,228 @@
+/* Calendars panel + editor dialog. Uses shared theme tokens (--surface-*,
+   --border, --text-*, --danger) so it tracks world theme + dark mode. */
+
+.timelineBar {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--ui-scale-factor));
+  width: 100%;
+}
+
+.timelineName {
+  font-size: var(--ui-font-size);
+}
+
+.timelineSelect {
+  padding: calc(6px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-0);
+  font-size: var(--ui-font-size);
+}
+
+.calName {
+  font-size: var(--ui-font-size);
+  color: var(--text-1);
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+/* ---- editor dialog ---- */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: calc(10px * var(--ui-scale-factor));
+  width: 100%;
+  height: min(84vh, calc(100vh - 96px));
+}
+
+.editorHead {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--ui-scale-factor));
+}
+
+.nameInput {
+  font-size: var(--ui-font-size);
+  min-width: 220px;
+}
+
+.editorBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: calc(16px * var(--ui-scale-factor));
+  align-items: start;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.editorForm,
+.editorTest {
+  height: 100%;
+  overflow-y: auto;
+  padding-right: calc(6px * var(--ui-scale-factor));
+}
+
+.editorTest {
+  border-left: 1px solid var(--border);
+  padding-left: calc(16px * var(--ui-scale-factor));
+}
+
+/* ---- definition form ---- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: calc(18px * var(--ui-scale-factor));
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--ui-scale-factor));
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--ui-font-size);
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.paramCard {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--ui-scale-factor));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: calc(10px * var(--ui-scale-factor));
+  background: var(--surface-1);
+}
+
+.paramHead {
+  display: flex;
+  align-items: center;
+  gap: calc(6px * var(--ui-scale-factor));
+}
+
+.attachRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(10px * var(--ui-scale-factor));
+}
+
+.attach {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--ui-scale-factor));
+  min-width: 0;
+}
+
+.attachHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(6px * var(--ui-scale-factor));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--ui-scale-factor));
+  min-width: 0;
+}
+
+.smallLabel {
+  font-size: var(--ui-font-size-small);
+  color: var(--text-2);
+}
+
+.modeSelect {
+  padding: calc(4px * var(--ui-scale-factor)) calc(8px * var(--ui-scale-factor));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-0);
+  font-size: var(--ui-font-size-small);
+}
+
+.epochGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: calc(8px * var(--ui-scale-factor));
+  width: 100%;
+}
+
+.editorLoading {
+  font-size: var(--ui-font-size-small);
+  color: var(--text-2);
+  padding: calc(8px * var(--ui-scale-factor));
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+}
+
+/* ---- test panel ---- */
+
+.testPanel {
+  display: flex;
+  flex-direction: column;
+  gap: calc(10px * var(--ui-scale-factor));
+}
+
+.testBlock {
+  display: flex;
+  flex-direction: column;
+  gap: calc(6px * var(--ui-scale-factor));
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--ui-scale-factor));
+}
+
+.ok {
+  margin: 0;
+  font-size: var(--ui-font-size-small);
+  color: var(--accent);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--ui-font-size-small);
+  color: var(--danger);
+}
+
+.result {
+  border-top: 1px solid var(--border);
+  padding-top: calc(8px * var(--ui-scale-factor));
+}
+
+.resultGrid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: calc(4px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor));
+  margin: 0;
+  font-size: var(--ui-font-size-small);
+}
+
+.resultGrid dt {
+  color: var(--text-2);
+}
+
+.resultGrid dd {
+  margin: 0;
+  color: var(--text-1);
+  font-family: ui-monospace, monospace;
+  word-break: break-word;
+}
+
+.verifyRow {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--ui-scale-factor));
+  margin-top: calc(8px * var(--ui-scale-factor));
+  flex-wrap: wrap;
+}

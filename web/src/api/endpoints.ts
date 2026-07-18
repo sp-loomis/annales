@@ -4,6 +4,9 @@ import { del, get, patch, post, put } from "./client";
 import type {
   ArtifactDetail,
   ArtifactWithUpload,
+  Calendar,
+  CalendarConvertResult,
+  CalendarDefinition,
   EntryDetail,
   EntrySummary,
   EntryType,
@@ -13,6 +16,7 @@ import type {
   RelationType,
   SearchResult,
   Section,
+  Timeline,
   World,
   WorkspaceStateDto,
   WorldTheme,
@@ -164,6 +168,34 @@ export function search(worldId: string, params: SearchParams): Promise<Page<Sear
   qs.set("limit", String(params.limit ?? 200));
   return get(`/worlds/${worldId}/search?${qs}`);
 }
+
+// ---- timelines ----
+
+export const listTimelines = (worldId: string) =>
+  get<Page<Timeline>>(`/worlds/${worldId}/timelines`);
+export const createTimeline = (worldId: string, body: { name: string; params?: object | null }) =>
+  post<Timeline>(`/worlds/${worldId}/timelines`, body);
+export const patchTimeline = (id: string, body: { name?: string; params?: object | null }) =>
+  patch<Timeline>(`/timelines/${id}`, body);
+export const deleteTimeline = (id: string) => del(`/timelines/${id}`);
+
+// ---- calendars ----
+
+export const listCalendars = (timelineId: string) =>
+  get<Page<Calendar>>(`/timelines/${timelineId}/calendars`);
+export const createCalendar = (
+  timelineId: string,
+  body: { name: string; definition: CalendarDefinition }
+) => post<Calendar>(`/timelines/${timelineId}/calendars`, body);
+export const patchCalendar = (
+  id: string,
+  body: { name?: string; definition?: CalendarDefinition }
+) => patch<Calendar>(`/calendars/${id}`, body);
+export const deleteCalendar = (id: string) => del(`/calendars/${id}`);
+
+/** Server-side tick↔date conversion + rendering (exact engine parity). */
+export const convertCalendar = (id: string, body: { tick: number } | { date: object }) =>
+  post<CalendarConvertResult>(`/calendars/${id}/convert`, body);
 
 // ---- theme / workspace state ----
 

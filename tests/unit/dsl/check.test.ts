@@ -176,6 +176,21 @@ describe('check — return typing per attachment point', () => {
     expect(() => run('return BC', exp)).not.toThrow();
     expect(() => run('return January', exp)).toThrow(DslError);
   });
+
+  it('pushes the return domain into all-literal if/case branches', () => {
+    const exp: ExpectedType = { kind: 'namedOrNumber', domain: 'era' };
+    expect(() => run('return if year >= 1 then AD else BC', exp)).not.toThrow();
+    expect(() => run('return case era when BC then BC when AD then AD', exp)).not.toThrow();
+    // nested if inside a case clause
+    expect(() =>
+      run('return case era when BC then BC when AD then (if year >= 1 then AD else BC)', exp)
+    ).not.toThrow();
+  });
+
+  it('rejects a wrong-domain literal even with a domain hint', () => {
+    const exp: ExpectedType = { kind: 'namedOrNumber', domain: 'era' };
+    expect(() => run('return if flag then January else BC', exp)).toThrow(DslError);
+  });
 });
 
 describe('check — Null carve-out', () => {
@@ -215,8 +230,13 @@ describe('check — string templates', () => {
     expect(() => run('return "{year:02d}"', { kind: 'string' })).not.toThrow();
   });
 
-  it('interpolating a String is rejected (no nested templates)', () => {
-    expect(() => run('s := "abc"\nreturn "{s}"', { kind: 'string' })).toThrow(DslError);
+  it('interpolating a computed String local is legal', () => {
+    expect(() => run('s := "abc"\nreturn "{s}"', { kind: 'string' })).not.toThrow();
+    expect(() => run('m := "{month} {year}"\nreturn "Date: {m}"', { kind: 'string' })).not.toThrow();
+  });
+
+  it('a format spec on a String interpolation is still rejected', () => {
+    expect(() => run('s := "{year}"\nreturn "{s:03d}"', { kind: 'string' })).toThrow(DslError);
   });
 
   it('Named and Boolean interpolate without a spec', () => {

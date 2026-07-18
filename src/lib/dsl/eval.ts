@@ -197,6 +197,7 @@ class Evaluator {
     }
     if (typeof value === 'number') return String(value);
     if (typeof value === 'boolean') return value ? 'true' : 'false';
+    if (typeof value === 'string') return value;
     if (isNamed(value)) {
       return this.bindings.displays?.get(value.domain)?.get(value.value) ?? value.value;
     }

@@ -11,6 +11,14 @@
   border-radius: var(--radius-l);
   box-shadow: var(--shadow-popover);
   overflow: visible;
+  /* Above app chrome (z 20), below dialogs opened from within settings
+     (shared Dialog overlay/content at 40/41 — e.g. the calendar editor). */
+  z-index: 31;
+}
+
+/* Settings' own overlay must sit just under its content (31), not at the shared
+   overlay's 40 — otherwise it covers the settings panel and swallows clicks. */
+.overlay {
   z-index: 30;
 }
 

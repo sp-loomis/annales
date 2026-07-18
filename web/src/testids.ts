@@ -95,4 +95,22 @@ export const TID = {
   themeDarkToggle: "theme-dark-toggle",
   themeIconWeight: (weight: string) => `theme-icon-weight-${weight}`,
   themeUiScale: (scale: string) => `theme-ui-scale-${scale}`,
+
+  // calendars
+  timelineSelect: "settings-timeline-select",
+  timelineAdd: "settings-timeline-add",
+  calendarRow: (id: string) => `settings-calendar-${id}`,
+  calendarAdd: "settings-calendar-add",
+  calendarEdit: (id: string) => `settings-calendar-edit-${id}`,
+  calendarDelete: (id: string) => `settings-calendar-delete-${id}`,
+  calendarName: "settings-calendar-name",
+  calendarSave: "settings-calendar-save",
+  calendarAddParam: "settings-calendar-add-param",
+  calendarAddDerived: "settings-calendar-add-derived",
+  dslField: (field: string) => `settings-dsl-${field}`,
+  testTickInput: "settings-cal-test-tick",
+  testTickRun: "settings-cal-test-tick-run",
+  testDateRun: "settings-cal-test-date-run",
+  testResult: "settings-cal-test-result",
+  testError: "settings-cal-test-error",
 } as const;

@@ -40,7 +40,7 @@ function bindDate(cal: CompiledCalendar, date: DateTuple): BoundDate {
 }
 
 function evalDerivedField(
-  cal: CompiledCalendar,
+  _cal: CompiledCalendar,
   field: CompiledDerived,
   b: Bindings
 ): Value {

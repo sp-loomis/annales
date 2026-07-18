@@ -1,0 +1,38 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.wrap {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-1);
+  /* Drag the bottom edge to expand a cramped formula. */
+  resize: vertical;
+  min-height: 72px;
+}
+
+.wrap > :global(section),
+.wrap :global(.monaco-editor) {
+  height: 100% !important;
+}
+
+.issueError {
+  margin: 0;
+  font-size: var(--ui-font-size-small);
+  color: var(--danger);
+  font-family: ui-monospace, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.issueWarn {
+  margin: 0;
+  font-size: var(--ui-font-size-small);
+  color: var(--accent);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
