@@ -44,6 +44,39 @@ describe('POST /entries/:entryId/date-ranges', () => {
     expect(res.body.precisionTier).toBe('exact');
   });
 
+  it('persists label + displayStyle, defaulting displayStyle to pretty', async () => {
+    const { entryId, calendarId } = await setup();
+    const withLabel = await api(app, 'POST', `/entries/${entryId}/date-ranges`, {
+      calendarId,
+      rawComponents: { year: 1 },
+      precisionTier: 'exact',
+      label: 'Founding',
+      displayStyle: 'short',
+    });
+    expect(withLabel.status).toBe(201);
+    expect(withLabel.body.label).toBe('Founding');
+    expect(withLabel.body.displayStyle).toBe('short');
+
+    const bare = await api(app, 'POST', `/entries/${entryId}/date-ranges`, {
+      calendarId,
+      rawComponents: { year: 2 },
+      precisionTier: 'exact',
+    });
+    expect(bare.body.label).toBeNull();
+    expect(bare.body.displayStyle).toBe('pretty');
+
+    const patched = await api(app, 'PATCH', `/date-ranges/${bare.body.id}`, {
+      label: 'Renamed',
+      displayStyle: 'short',
+    });
+    expect(patched.body.label).toBe('Renamed');
+    expect(patched.body.displayStyle).toBe('short');
+
+    const detail = await api(app, 'GET', `/entries/${entryId}`);
+    const founding = detail.body.dateRanges.find((r: { label: string | null }) => r.label === 'Founding');
+    expect(founding.displayStyle).toBe('short');
+  });
+
   it('a prefix denotes the whole unit — a bare year covers the year', async () => {
     const { entryId, calendarId } = await setup();
     const res = await api(app, 'POST', `/entries/${entryId}/date-ranges`, {

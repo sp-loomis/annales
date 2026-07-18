@@ -1,0 +1,278 @@
+/* Dates section — mirrors RelationBlock/AddRelationPopover styling. */
+
+.block {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-gap-s);
+  margin-bottom: 10px;
+  font-size: var(--ui-font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-2);
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--ui-font-size);
+  color: var(--text-2);
+  font-style: italic;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-1);
+  transition: border-color 120ms var(--ease);
+}
+
+.card:hover {
+  border-color: var(--accent);
+}
+
+.cardTop {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+
+.cardBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: calc(3px * var(--ui-scale-factor));
+  padding: calc(8px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor));
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+
+.cardCalendar {
+  font-size: var(--ui-font-size-small);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+}
+
+.cardTitle {
+  font-family: var(--font-world);
+  font-size: calc(14px * var(--ui-scale-factor));
+  font-weight: 500;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardSub {
+  font-size: var(--ui-font-size-small);
+  color: var(--text-2);
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+}
+
+.caret {
+  color: var(--text-2);
+}
+
+.remove {
+  opacity: 0;
+  transition: opacity 120ms var(--ease);
+}
+
+.card:hover .remove {
+  opacity: 1;
+}
+
+/* cross-calendar expansion */
+
+.cross {
+  list-style: none;
+  margin: 0;
+  padding: calc(4px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor))
+    calc(8px * var(--ui-scale-factor));
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.crossRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ui-gap-m);
+  font-size: var(--ui-font-size-small);
+}
+
+.crossName {
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.crossValue {
+  font-family: var(--font-world);
+  color: var(--text-1);
+  text-align: right;
+}
+
+.crossOut {
+  color: var(--text-2);
+  font-style: italic;
+  text-align: right;
+}
+
+.crossHint {
+  margin: 0;
+  padding: calc(4px * var(--ui-scale-factor)) calc(10px * var(--ui-scale-factor))
+    calc(8px * var(--ui-scale-factor));
+  border-top: 1px solid var(--border);
+  font-size: var(--ui-font-size-small);
+  color: var(--text-2);
+  font-style: italic;
+}
+
+/* add / edit popover */
+
+.addTrigger {
+  margin-left: auto;
+  padding: calc(2px * var(--ui-scale-factor)) calc(8px * var(--ui-scale-factor));
+  font-size: var(--ui-font-size-small);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.popover {
+  width: 320px;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-popover);
+  padding: 12px;
+  z-index: 30;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.select {
+  padding: calc(5px * var(--ui-scale-factor)) calc(8px * var(--ui-scale-factor));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-0);
+  font-size: var(--ui-font-size);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--ui-font-size-small);
+  color: var(--text-2);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--ui-font-size-small);
+  color: var(--danger);
+}
+
+/* cascading picker */
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-m);
+}
+
+.pickerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-gap-s);
+}
+
+.pickerLabel {
+  flex: 0 0 34%;
+  font-size: var(--ui-font-size-small);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+}
+
+.pickerControl {
+  flex: 1;
+  min-width: 0;
+  padding: calc(4px * var(--ui-scale-factor)) calc(6px * var(--ui-scale-factor));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface-0);
+  font-size: var(--ui-font-size);
+}
+
+.pickerDrop {
+  color: var(--text-2);
+}
+
+/* pretty/short toggle */
+
+.styleToggle {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-1);
+}
+
+.styleOption,
+.styleActive {
+  flex: 1;
+  padding: calc(4px * var(--ui-scale-factor)) 0;
+  border: none;
+  border-radius: var(--radius-s);
+  background: none;
+  cursor: pointer;
+  font-size: var(--ui-font-size-small);
+  color: var(--text-2);
+}
+
+.styleActive {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.preview {
+  margin: 0;
+  padding: calc(5px * var(--ui-scale-factor)) calc(8px * var(--ui-scale-factor));
+  border-radius: var(--radius-m);
+  background: var(--surface-1);
+  font-family: var(--font-world);
+  font-size: calc(14px * var(--ui-scale-factor));
+  color: var(--text-1);
+  text-align: center;
+}

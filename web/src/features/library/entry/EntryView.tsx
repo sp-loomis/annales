@@ -20,6 +20,7 @@ import { ProseRenderer } from "./read/ProseRenderer";
 import { ImageBlockRead } from "./read/ImageBlockRead";
 import { SketchPreview } from "./read/SketchPreview";
 import { RelationBlock } from "./read/RelationBlock";
+import { DateRangeBlock } from "../dates/DateRangeBlock";
 import { EntryEdit } from "./edit/EntryEdit";
 import { isTempEntryId } from "./tempEntry";
 import { TID } from "../../../testids";
@@ -150,6 +151,8 @@ export function EntryView({ entryId }: { entryId: string }) {
           })
         )}
       </div>
+
+      <DateRangeBlock entry={entry} />
 
       <RelationBlock relations={entry.relations} />
     </article>

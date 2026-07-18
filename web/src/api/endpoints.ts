@@ -7,6 +7,7 @@ import type {
   Calendar,
   CalendarConvertResult,
   CalendarDefinition,
+  DateRangeMeta,
   EntryDetail,
   EntrySummary,
   EntryType,
@@ -150,6 +151,22 @@ export function uploadToPresigned(
 export const createRelation = (body: { fromId: string; toId: string; typeId: string }) =>
   post<RelationRow>("/relations", body);
 export const deleteRelation = (id: string) => del(`/relations/${id}`);
+
+// ---- date ranges ----
+
+export interface DateRangeInput {
+  calendarId: string;
+  rawComponents: Record<string, number | string>;
+  precisionTier?: string;
+  label?: string | null;
+  displayStyle?: "pretty" | "short";
+}
+
+export const createDateRange = (entryId: string, body: DateRangeInput) =>
+  post<DateRangeMeta>(`/entries/${entryId}/date-ranges`, { precisionTier: "exact", ...body });
+export const patchDateRange = (id: string, body: Partial<DateRangeInput>) =>
+  patch<DateRangeMeta>(`/date-ranges/${id}`, body);
+export const deleteDateRange = (id: string) => del(`/date-ranges/${id}`);
 
 // ---- search ----
 
