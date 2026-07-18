@@ -172,6 +172,8 @@ export function entryRoutes(app: FastifyInstance): void {
         tickStart: r.tickStart === null ? null : Number(r.tickStart),
         tickEnd: r.tickEnd === null ? null : Number(r.tickEnd),
         precisionTier: r.precisionTier,
+        label: r.label,
+        displayStyle: r.displayStyle,
       })),
       relations: await relationsView(app.prisma, entry.id),
     };

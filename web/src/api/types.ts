@@ -87,10 +87,12 @@ export interface GeometryMeta {
 export interface DateRangeMeta {
   id: string;
   calendarId: string;
-  rawComponents: unknown;
+  rawComponents: Record<string, number | string>;
   tickStart: number | null;
   tickEnd: number | null;
   precisionTier: string | null;
+  label: string | null;
+  displayStyle: "pretty" | "short";
 }
 
 export interface RelationView {

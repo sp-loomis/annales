@@ -75,6 +75,17 @@ export const TID = {
   relationSubmit: "relation-submit",
   relationRemove: (relationId: string) => `relation-remove-${relationId}`,
 
+  // date ranges
+  dateRangeCard: (id: string) => `date-range-${id}`,
+  dateRangeAdd: "date-range-add",
+  dateRangeLabelInput: "date-range-label-input",
+  dateRangeTimelineSelect: "date-range-timeline-select",
+  dateRangeCalendarSelect: "date-range-calendar-select",
+  dateRangeStyleToggle: "date-range-style-toggle",
+  dateRangeSubmit: "date-range-submit",
+  dateRangeRemove: (id: string) => `date-range-remove-${id}`,
+  dateRangeExpand: (id: string) => `date-range-expand-${id}`,
+
   // settings
   settingsNav: (section: string) => `settings-nav-${section}`,
   settingsClose: "settings-close",
@@ -103,6 +114,7 @@ export const TID = {
   calendarAdd: "settings-calendar-add",
   calendarEdit: (id: string) => `settings-calendar-edit-${id}`,
   calendarDelete: (id: string) => `settings-calendar-delete-${id}`,
+  calendarDuplicate: (id: string) => `settings-calendar-duplicate-${id}`,
   calendarName: "settings-calendar-name",
   calendarSave: "settings-calendar-save",
   calendarAddParam: "settings-calendar-add-param",

@@ -260,6 +260,50 @@ function readPrefix(cal: CompiledCalendar, raw: Record<string, unknown>): Prefix
   return entries;
 }
 
+/**
+ * Domain of the next unbound param given a contiguous top-down prefix of
+ * already-chosen components. Drives a cascading date picker client-side — same
+ * engine, same parity as the server. `{ param: null }` means the prefix is a
+ * full tuple. Throws `CalendarError` if the prefix is invalid or out of range.
+ */
+export type ParamOptions =
+  | { param: null }
+  | { param: string; kind: 'named'; values: string[]; step: 1 | -1 }
+  | {
+      param: string;
+      kind: 'number';
+      from: number | null;
+      to: number | null;
+      step: 1 | -1;
+      count: number | null;
+    };
+
+export function paramOptions(cal: CompiledCalendar, prefix: Record<string, unknown>): ParamOptions {
+  const depth = Object.keys(prefix).length;
+  if (depth >= cal.params.length) return { param: null };
+  let scope: Bindings;
+  if (depth === 0) {
+    scope = emptyScope(cal);
+  } else {
+    const entries = readPrefix(cal, prefix);
+    const last = entries[entries.length - 1];
+    scope = bindParam(last.scope, last.param, last.value, last.dom);
+  }
+  const param = cal.params[depth];
+  const dom = resolveParamDomain(param, scope);
+  if (dom.kind === 'named') {
+    return { param: param.name, kind: 'named', values: dom.active, step: dom.step };
+  }
+  return {
+    param: param.name,
+    kind: 'number',
+    from: dom.from,
+    to: dom.to,
+    step: dom.step,
+    count: dom.count,
+  };
+}
+
 function epochValueAt(cal: CompiledCalendar, level: number): number | string {
   const v = cal.epoch.get(cal.params[level].name)!;
   return typeof v === 'object' ? (v as NamedValue).value : (v as number);

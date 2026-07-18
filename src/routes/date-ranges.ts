@@ -3,6 +3,7 @@ import { crossWorld, notFound, validation } from '../lib/errors.js';
 import { CalendarError, compileCalendar, dateToTicks, type Ticks } from '../lib/calendar/index.js';
 
 const PRECISION_TIERS = ['exact', 'circa', 'ordinal'];
+const DISPLAY_STYLES = ['pretty', 'short'];
 
 function serialize(row: any) {
   return {
@@ -14,6 +15,8 @@ function serialize(row: any) {
     tickStart: row.tickStart === null ? null : Number(row.tickStart),
     tickEnd: row.tickEnd === null ? null : Number(row.tickEnd),
     precisionTier: row.precisionTier,
+    label: row.label,
+    displayStyle: row.displayStyle,
   };
 }
 
@@ -29,7 +32,13 @@ function ticksFor(definition: unknown, raw: Record<string, unknown>): Ticks {
 export function dateRangeRoutes(app: FastifyInstance): void {
   app.post<{
     Params: { entryId: string };
-    Body: { calendarId: string; rawComponents: Record<string, unknown>; precisionTier: string };
+    Body: {
+      calendarId: string;
+      rawComponents: Record<string, unknown>;
+      precisionTier: string;
+      label?: string | null;
+      displayStyle?: string;
+    };
   }>(
     '/entries/:entryId/date-ranges',
     {
@@ -41,6 +50,8 @@ export function dateRangeRoutes(app: FastifyInstance): void {
             calendarId: { type: 'string', minLength: 1 },
             rawComponents: { type: 'object' },
             precisionTier: { enum: PRECISION_TIERS },
+            label: { type: ['string', 'null'] },
+            displayStyle: { enum: DISPLAY_STYLES },
           },
         },
       },
@@ -66,6 +77,8 @@ export function dateRangeRoutes(app: FastifyInstance): void {
           precisionTier: req.body.precisionTier,
           tickStart: ticks.tickStart,
           tickEnd: ticks.tickEnd,
+          label: req.body.label ?? null,
+          ...(req.body.displayStyle !== undefined ? { displayStyle: req.body.displayStyle } : {}),
         },
       });
       return reply.code(201).send(serialize(row));
@@ -78,6 +91,8 @@ export function dateRangeRoutes(app: FastifyInstance): void {
       calendarId?: string;
       rawComponents?: Record<string, unknown>;
       precisionTier?: string;
+      label?: string | null;
+      displayStyle?: string;
     };
   }>(
     '/date-ranges/:id',
@@ -89,6 +104,8 @@ export function dateRangeRoutes(app: FastifyInstance): void {
             calendarId: { type: 'string', minLength: 1 },
             rawComponents: { type: 'object' },
             precisionTier: { enum: PRECISION_TIERS },
+            label: { type: ['string', 'null'] },
+            displayStyle: { enum: DISPLAY_STYLES },
           },
         },
       },
@@ -121,6 +138,8 @@ export function dateRangeRoutes(app: FastifyInstance): void {
           precisionTier: req.body.precisionTier ?? existing.precisionTier,
           tickStart: ticks.tickStart,
           tickEnd: ticks.tickEnd,
+          ...(req.body.label !== undefined ? { label: req.body.label } : {}),
+          ...(req.body.displayStyle !== undefined ? { displayStyle: req.body.displayStyle } : {}),
         },
       });
       return serialize(row);

@@ -15,4 +15,5 @@ export const keys = {
   artifact: (kind: string, id: string) => ['artifacts', kind, id] as const,
   timelines: (worldId: string) => ['worlds', worldId, 'timelines'] as const,
   calendars: (timelineId: string) => ['timelines', timelineId, 'calendars'] as const,
+  worldCalendars: (worldId: string) => ['worlds', worldId, 'all-calendars'] as const,
 };

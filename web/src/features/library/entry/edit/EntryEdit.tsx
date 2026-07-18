@@ -19,6 +19,7 @@ import { Chip } from "../../../../components/Chip";
 import { ConfirmDialog } from "../../../../components/ConfirmDialog";
 import { RelationBlock } from "../read/RelationBlock";
 import { AddRelationPopover } from "../../relations/AddRelationPopover";
+import { DateRangeBlock } from "../../dates/DateRangeBlock";
 import { BlockCompositor } from "./BlockCompositor";
 import { useSaveEntry, cancelDraft } from "./useSaveEntry";
 import { getUntitledLabel, isTempEntryId } from "../tempEntry";
@@ -244,6 +245,8 @@ export function EntryEdit({
       </header>
 
       <BlockCompositor entryId={entryId} allowArtifacts={!isTempEntry} />
+
+      {!isTempEntry && entry && <DateRangeBlock entry={entry} editable />}
 
       {!isTempEntry && entry && (
         <RelationBlock
